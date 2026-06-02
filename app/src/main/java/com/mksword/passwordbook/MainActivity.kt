@@ -1,6 +1,7 @@
 package com.mksword.passwordbook
 
 import android.os.Bundle
+import android.util.Base64
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.mksword.passwordbook.auth.AuthManager
 import com.mksword.passwordbook.ui.theme.XyPasswordBookTheme
 import net.openid.appauth.*
+import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
 
@@ -34,6 +36,7 @@ class MainActivity : ComponentActivity() {
                 var isInitialized by remember { mutableStateOf(false) }
                 var isLoggedIn by remember { mutableStateOf(false) }
                 var isProcessing by remember { mutableStateOf(false) }
+                var userName by remember { mutableStateOf("") }
 
                 // 启动时初始化
                 LaunchedEffect(Unit) {
@@ -67,14 +70,8 @@ class MainActivity : ComponentActivity() {
 
                                 if (tokenResponse != null) {
                                     isLoggedIn = true
+                                    userName = parseUserNameFromToken(tokenResponse.accessToken)
                                     Toast.makeText(this@MainActivity, "安全登录成功", Toast.LENGTH_SHORT).show()
-                                    
-                                    // 【演示：如何安全读取Token做业务】
-                                    AuthManager.getValidAccessToken { token, err ->
-                                        if (token != null) {
-                                            // 用这个安全密令发送请求给你的密码本后端
-                                        }
-                                    }
                                 } else {
                                     Toast.makeText(this@MainActivity, "凭证换取失败", Toast.LENGTH_SHORT).show()
                                 }
@@ -89,6 +86,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AuthManager.clearState() // 擦除加密盘
                     isLoggedIn = false
+                    userName = ""
                     Toast.makeText(this@MainActivity, "会话已安全销毁", Toast.LENGTH_SHORT).show()
                 }
 
@@ -106,6 +104,7 @@ class MainActivity : ComponentActivity() {
                         } else {
                             if (isLoggedIn) {
                                 MainAppContent(
+                                    userName = userName,
                                     onLogoutClick = {
                                         val config = AuthManager.serviceConfig
                                         if (config?.endSessionEndpoint != null) {
@@ -117,6 +116,7 @@ class MainActivity : ComponentActivity() {
                                         } else {
                                             AuthManager.clearState()
                                             isLoggedIn = false
+                                            userName = ""
                                         }
                                     }
                                 )
@@ -148,13 +148,33 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private fun parseUserNameFromToken(token: String): String {
+    return try {
+        val parts = token.split(".")
+        if (parts.size < 2) return ""
+        val payload = String(Base64.decode(parts[1], Base64.URL_SAFE))
+        val json = JSONObject(payload)
+        val familyName = json.optString("family_name", "")
+        val givenName = json.optString("given_name", "").trim()
+        if (givenName.isNotEmpty()) {
+            familyName + givenName
+        } else {
+            val name = json.optString("name", "").trim()
+            val surname = json.optString("surname", "")
+            (surname + name).trim()
+        }
+    } catch (e: Exception) {
+        ""
+    }
+}
+
 @Composable
 fun LoginScreen(onLoginClick: () -> Unit) {
     Button(onClick = onLoginClick) { Text("登录") }
 }
 
 @Composable
-fun MainAppContent(onLogoutClick: () -> Unit) {
+fun MainAppContent(userName: String, onLogoutClick: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -166,8 +186,10 @@ fun MainAppContent(onLogoutClick: () -> Unit) {
         ) {
             Text("密码本", style = MaterialTheme.typography.headlineMedium)
             Box {
-                IconButton(onClick = { expanded = true }) {
+                TextButton(onClick = { expanded = true }) {
                     Icon(Icons.Default.AccountCircle, contentDescription = "用户信息")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(userName)
                 }
                 DropdownMenu(
                     expanded = expanded,
