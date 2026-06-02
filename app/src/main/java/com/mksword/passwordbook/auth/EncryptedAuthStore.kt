@@ -2,19 +2,21 @@ package com.mksword.passwordbook.auth
 
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
+import androidx.security.crypto.MasterKey
 import net.openid.appauth.AuthState
 
 class EncryptedAuthStore(context: Context) {
-    
-    // 创建或者获取硬件级别的加密密钥
-    private val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-    
+
+    // 使用新版 MasterKey.Builder API
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
     // 初始化安全存储
     private val sharedPreferences = EncryptedSharedPreferences.create(
-        "secure_auth_prefs",
-        masterKeyAlias,
         context,
+        "secure_auth_prefs",
+        masterKey,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
