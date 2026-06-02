@@ -26,16 +26,16 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.PopupProperties
@@ -351,6 +352,29 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                     }
                 )
             }
+        },
+        bottomBar =  {
+            Button(
+                onClick = {
+                    // 点击"新建密码本"事件留空，后续可用于弹出输入框
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                // 使用 RectangleShape 代替 RoundedCornerShape(0.dp)，性能更好且代码更整洁
+                shape = RectangleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "新建"
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("新建密码本", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -405,26 +429,6 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                     }
                 }
             }
-        }
-    },
-    bottomBar = {
-        Button(
-            onClick = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = RectangleShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "新建"
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("新建密码本", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
