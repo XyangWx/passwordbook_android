@@ -58,30 +58,23 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false // 生产环境建议后续开启并配置混淆
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
 
-            // 【新增】Release 编译时动态注入参数
-            val authEp = getAuthProperty("AUTH_ENDPOINT", "PROD_AUTH_ENDPOINT", "")
-            val tokenEp = getAuthProperty("TOKEN_ENDPOINT", "PROD_TOKEN_ENDPOINT", "")
+            val authIssuer = getAuthProperty("AUTH_ISSUER", "PROD_AUTH_ISSUER", "")
             val clientId = getAuthProperty("CLIENT_ID", "PROD_CLIENT_ID", "")
 
-            buildConfigField("String", "AUTH_ENDPOINT", "\"$authEp\"")
-            buildConfigField("String", "TOKEN_ENDPOINT", "\"$tokenEp\"")
+            buildConfigField("String", "AUTH_ISSUER", "\"$authIssuer\"")
             buildConfigField("String", "CLIENT_ID", "\"$clientId\"")
         }
-        
-        // 【新增】显式声明 debug 闭包，用于配置开发环境的参数
         getByName("debug") {
-            val authEp = getAuthProperty("AUTH_ENDPOINT_DEBUG", "DEV_AUTH_ENDPOINT", "https://mksword.com")
-            val tokenEp = getAuthProperty("TOKEN_ENDPOINT_DEBUG", "DEV_TOKEN_ENDPOINT", "https://mksword.com")
-            val clientId = getAuthProperty("CLIENT_ID_DEBUG", "DEV_CLIENT_ID", "password_book_app_dev")
+            val authIssuer = getAuthProperty("AUTH_ISSUER_DEBUG", "DEV_AUTH_ISSUER", "https://mksword.com")
+            val clientId = getAuthProperty("CLIENT_ID_DEBUG", "DEV_CLIENT_ID", "password_book_app")
 
-            buildConfigField("String", "AUTH_ENDPOINT", "\"$authEp\"")
-            buildConfigField("String", "TOKEN_ENDPOINT", "\"$tokenEp\"")
+            buildConfigField("String", "AUTH_ISSUER", "\"$authIssuer\"")
             buildConfigField("String", "CLIENT_ID", "\"$clientId\"")
         }
     }
