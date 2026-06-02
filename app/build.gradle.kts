@@ -91,6 +91,9 @@ dependencies {
     // OIDC 协议核心库
     implementation("net.openid:appauth:0.11.1")
 
+    // OkHttp 网络库
+    implementation(libs.okhttp.core)
+
     // Android 官方加密存储库
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
