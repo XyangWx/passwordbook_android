@@ -18,7 +18,7 @@ object AuthManager {
     private val AUTH_ISSUER: String = BuildConfig.AUTH_ISSUER
 
     // 回调地址，必须与服务器后台配置严格一致
-    const val REDIRECT_URI = "com.mksword.passwordbook://callboack"
+    const val REDIRECT_URI = "com.mksword.passwordbook://callback"
     const val LOGOUT_REDIRECT_URI = "com.mksword.passwordbook://logout-callback"
 
     // 内存中的 OIDC 终结点配置，由 fetchFromIssuer 成功后赋值
