@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // 【新增】安全读取编译参数/系统变量/本地文件的辅助函数
@@ -93,6 +94,9 @@ dependencies {
 
     // OkHttp 网络库
     implementation(libs.okhttp.core)
+
+    // Kotlin 序列化
+    implementation(libs.kotlinx.serialization.json)
 
     // Material Icons
     implementation("androidx.compose.material:material-icons-extended")
