@@ -44,8 +44,15 @@ android {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
 
-    // AppAuth for OAuth2 login
+    // OIDC 协议核心库
     implementation("net.openid:appauth:0.11.1")
+
+    // Android 官方加密存储库
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // 协程与生命周期库
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.0")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.0")
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
