@@ -1,0 +1,110 @@
+package com.mksword.passwordbook
+
+import android.content.Context
+import android.util.Base64
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mksword.passwordbook.auth.AuthManager
+import com.mksword.passwordbook.entities.PasswordBook
+import com.mksword.passwordbook.network.PasswordBookApiClient
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+
+class AuthViewModel : ViewModel() {
+
+    // UI 驱动状态收拢
+    var isInitialized by mutableStateOf(false)
+        private set
+    var isLoggedIn by mutableStateOf(false)
+        private set
+    var isProcessing by remember { mutableStateOf(false) } // 原 MainActivity 中的换取凭证状态
+        private set
+    var userName by mutableStateOf("")
+        private set
+    var passwordBooks by mutableStateOf<List<PasswordBook>>(emptyList())
+        private set
+    var isListLoading by mutableStateOf(true)
+        private set
+
+    /**
+     * App 启动初始化
+     */
+    fun initialize(context: Context, onFail: () -> Unit) {
+        AuthManager.init(context) { success ->
+            isInitialized = success
+            if (success) {
+                isLoggedIn = AuthManager.authState.isAuthorized
+                if (isLoggedIn) {
+                    userName = parseUserNameFromToken(AuthManager.authState.accessToken ?: "")
+                    fetchPasswordBooks() // 已登录状态下，自动联网加载列表
+                }
+            } else {
+                onFail()
+            }
+        }
+    }
+
+    /**
+     * 登录成功凭证置换
+     */
+    fun onLoginSuccess(token: String) {
+        isLoggedIn = true
+        userName = parseUserNameFromToken(token)
+        fetchPasswordBooks()
+    }
+
+    /**
+     * 注销并清理本地状态
+     */
+    fun onLogoutSuccess() {
+        AuthManager.clearState()
+        isLoggedIn = false
+        userName = ""
+        passwordBooks = emptyList()
+    }
+
+    /**
+     * 异步联网拉取真实密码本列表
+     */
+    fun fetchPasswordBooks() {
+        viewModelScope.launch {
+            isListLoading = true
+            try {
+                passwordBooks = PasswordBookApiClient.getPasswordBooks()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isListLoading = false
+            }
+        }
+    }
+
+    fun setProcessing(processing: Boolean) {
+        isProcessing = processing
+    }
+
+    private fun parseUserNameFromToken(token: String): String {
+        return try {
+            val parts = token.split(".")
+            if (parts.size < 2) return ""
+            val payload = String(Base64.decode(parts[1], Base64.URL_SAFE))
+            val json = JSONObject(payload)
+            val familyName = json.optString("family_name", "")
+            val givenName = json.optString("given_name", "").trim()
+            if (givenName.isNotEmpty()) {
+                familyName + givenName
+            } else {
+                val name = json.optString("name", "").trim()
+                val surname = json.optString("surname", "")
+                val finalName = (surname + name).trim()
+                finalName.ifEmpty { "User" }
+            }
+        } catch (_: Exception) {
+            "User"
+        }
+    }
+}
