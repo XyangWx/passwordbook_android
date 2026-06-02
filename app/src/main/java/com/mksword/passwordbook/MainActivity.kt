@@ -217,8 +217,8 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                     windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
                     actions = {
                         Box(
-                            modifier = Modifier.fillMaxHeight(),
-                            contentAlignment = Alignment.CenterEnd
+                            modifier = Modifier
+                                .wrapContentSize(Alignment.TopEnd)
                         ) {
                             TextButton(
                                 onClick = { if (!isLoggingOut) expanded = true },
