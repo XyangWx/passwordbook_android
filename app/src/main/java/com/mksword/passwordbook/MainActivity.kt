@@ -190,11 +190,12 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Password Book")
+                    Text("Password Book", style = MaterialTheme.typography.titleLarge)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.inversePrimary
                 ),
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 actions = {
                     Box(modifier = Modifier.padding(end = 8.dp)) {
                         TextButton(
