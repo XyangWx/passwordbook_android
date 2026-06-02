@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.mksword.passwordbook.auth.AuthManager
 import com.mksword.passwordbook.ui.theme.XyPasswordBookTheme
@@ -180,7 +181,7 @@ fun MainAppContent(userName: String, onLogoutClick: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp).background(Color(0xFFE8F5E9)),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
