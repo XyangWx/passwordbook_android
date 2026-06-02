@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Base64
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +13,7 @@ import com.mksword.passwordbook.network.PasswordBookApiClient
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
+
 class AuthViewModel : ViewModel() {
 
     // UI 驱动状态收拢
@@ -21,8 +21,10 @@ class AuthViewModel : ViewModel() {
         private set
     var isLoggedIn by mutableStateOf(false)
         private set
-    var isProcessing by remember { mutableStateOf(false) } // 原 MainActivity 中的换取凭证状态
-        private set
+
+    // 【核心修复 1】：彻底去掉后面的 private set，允许外部直接赋值
+    var isProcessing by mutableStateOf(false)
+
     var userName by mutableStateOf("")
         private set
     var passwordBooks by mutableStateOf<List<PasswordBook>>(emptyList())
@@ -81,10 +83,6 @@ class AuthViewModel : ViewModel() {
                 isListLoading = false
             }
         }
-    }
-
-    fun setProcessing(processing: Boolean) {
-        isProcessing = processing
     }
 
     private fun parseUserNameFromToken(token: String): String {
