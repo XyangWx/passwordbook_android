@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
 
                                 if (tokenResponse != null) {
                                     isLoggedIn = true
-                                    userName = parseUserNameFromToken(tokenResponse.accessToken)
+                                    userName = parseUserNameFromToken(tokenResponse.accessToken ?: "")
                                     Toast.makeText(this@MainActivity, "安全登录成功", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(this@MainActivity, "凭证换取失败", Toast.LENGTH_SHORT).show()
