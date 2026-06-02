@@ -30,8 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material3.Badge
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -373,10 +373,10 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Folder,
+                            imageVector = Icons.Default.Lock,
                             contentDescription = "密码本图标",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
 
@@ -388,7 +388,7 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                             )
 
                             if (!book.description.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = book.description!!,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -398,29 +398,19 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                                 )
                             }
 
-                            if (!book.creationTime.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "创建于: ${book.creationTime}",
-                                    fontSize = 11.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ) {
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "${book.entryCount} 个密码",
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
+                                text = if (book.allowedType == 0) "Number Only" else "General",
+                                fontSize = 11.sp,
+                                color = Color.Gray
                             )
                         }
+
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "进入",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
