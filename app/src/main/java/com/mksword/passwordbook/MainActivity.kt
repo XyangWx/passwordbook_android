@@ -148,9 +148,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun LoginScreen(onLoginClick: () -> Unit) {
-    Text(text = "密码本 App", style = MaterialTheme.typography.headlineMedium)
-    Spacer(modifier = Modifier.height(24.dp))
-    Button(onClick = onLoginClick) { Text("登录 mksword 账号") }
+    Button(onClick = onLoginClick) { Text("登录") }
 }
 
 @Composable
