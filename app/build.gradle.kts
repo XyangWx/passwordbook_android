@@ -19,6 +19,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.mksword.passwordbook"
     }
 
     buildTypes {
@@ -41,6 +43,10 @@ android {
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
+
+    // AppAuth for OAuth2 login
+    implementation("net.openid:appauth:0.11.1")
+
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
