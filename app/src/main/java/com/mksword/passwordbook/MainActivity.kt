@@ -269,7 +269,7 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
         topBar = {
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.inversePrimary)
+                .background(Color(0xFF8BC34A))
                 .statusBarsPadding()
             ) {
                 TopAppBar(
