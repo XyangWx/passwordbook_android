@@ -9,20 +9,54 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material3.Badge
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mksword.passwordbook.entities.PasswordBook
 import com.mksword.passwordbook.auth.AuthManager
 import com.mksword.passwordbook.ui.theme.XyPasswordBookTheme
 import net.openid.appauth.*
@@ -200,6 +234,32 @@ fun LoginScreen(onLoginClick: () -> Unit) {
 fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClick: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
+    val passwordBooks = remember {
+        listOf(
+            PasswordBook(
+                id = "book_01",
+                name = "日常社交与生活",
+                description = "包含微信、QQ、微博、美团、淘宝等个人日常账户",
+                entryCount = 5,
+                creationTime = "2026-05-20"
+            ),
+            PasswordBook(
+                id = "book_02",
+                name = "开发与服务器凭证",
+                description = "Linux 生产机集群 root 密码、数据库与 Docker 秘钥",
+                entryCount = 14,
+                creationTime = "2026-06-01"
+            ),
+            PasswordBook(
+                id = "book_03",
+                name = "金融与银行账户",
+                description = null,
+                entryCount = 3,
+                creationTime = "2026-06-02"
+            )
+        )
+    }
+
     Scaffold(
         topBar = {
             Box(modifier = Modifier
@@ -216,10 +276,7 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                     ),
                     windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
                     actions = {
-                        Box(
-                            modifier = Modifier
-                                .wrapContentSize(Alignment.TopEnd)
-                        ) {
+                        Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
                             TextButton(
                                 onClick = { if (!isLoggingOut) expanded = true },
                                 enabled = !isLoggingOut,
@@ -289,13 +346,79 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
             }
         }
     ) { innerPadding ->
-        Box(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentAlignment = Alignment.Center
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("🛡️ 密码列表区域")
+            items(passwordBooks, key = { it.id }) { book ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    onClick = {}
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Folder,
+                            contentDescription = "密码本图标",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = book.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            if (!book.description.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = book.description!!,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            if (!book.creationTime.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "创建于: ${book.creationTime}",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ) {
+                            Text(
+                                text = "${book.entryCount} 个密码",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
