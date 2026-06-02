@@ -242,25 +242,25 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
     val passwordBooks = remember {
         listOf(
             PasswordBook(
-                id = "book_01",
-                name = "日常社交与生活",
-                description = "包含微信、QQ、微博、美团、淘宝等个人日常账户",
-                entryCount = 5,
-                creationTime = "2026-05-20"
+                id = "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+                name = "Social Life",
+                description = "日常社交与生活",
+                allowedType = 1,
+                entryCount = 5
             ),
             PasswordBook(
-                id = "book_02",
-                name = "开发与服务器凭证",
-                description = "Linux 生产机集群 root 密码、数据库与 Docker 秘钥",
-                entryCount = 14,
-                creationTime = "2026-06-01"
+                id = "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                name = "Dev Credentials",
+                description = "开发与服务器凭证",
+                allowedType = 1,
+                entryCount = 14
             ),
             PasswordBook(
-                id = "book_03",
-                name = "金融与银行账户",
-                description = null,
-                entryCount = 3,
-                creationTime = "2026-06-02"
+                id = "a3d88e91-1b2f-4c3d-9e5f-6a7b8c9d0e1f",
+                name = "Finance Accounts",
+                description = "金融与银行账户",
+                allowedType = 0,
+                entryCount = 3
             )
         )
     }
@@ -382,21 +382,10 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = book.name,
+                                text = book.description ?: "暂无描述",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
-
-                            if (!book.description.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = book.description!!,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
 
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
