@@ -276,7 +276,7 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
             ) {
                 TopAppBar(
                     title = {
-                        Text("Password Book", style = MaterialTheme.typography.titleLarge)
+                        Text("密码本", style = MaterialTheme.typography.titleLarge)
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
