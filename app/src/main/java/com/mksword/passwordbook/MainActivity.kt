@@ -13,11 +13,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mksword.passwordbook.auth.AuthManager
 import com.mksword.passwordbook.ui.theme.XyPasswordBookTheme
 import net.openid.appauth.*
@@ -107,6 +112,7 @@ class MainActivity : ComponentActivity() {
                             if (isLoggedIn) {
                                 MainAppContent(
                                     userName = userName,
+                                    isLoggingOut = false,
                                     onLogoutClick = {
                                         val config = AuthManager.serviceConfig
                                         if (config?.endSessionEndpoint != null) {
@@ -175,37 +181,92 @@ fun LoginScreen(onLoginClick: () -> Unit) {
     Button(onClick = onLoginClick) { Text("登录") }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainAppContent(userName: String, onLogoutClick: () -> Unit) {
+fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClick: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp).background(Color(0xFFE8F5E9)),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("密码本", style = MaterialTheme.typography.headlineMedium)
-            Box {
-                TextButton(onClick = { expanded = true }) {
-                    Icon(Icons.Default.AccountCircle, contentDescription = "用户信息")
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(userName)
-                }
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("注销") },
-                        onClick = {
-                            expanded = false
-                            onLogoutClick()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text("Password Book")
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.inversePrimary
+                ),
+                actions = {
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        TextButton(
+                            onClick = { if (!isLoggingOut) expanded = true },
+                            enabled = !isLoggingOut,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = "用户头像",
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = userName,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "下拉箭头",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
-                    )
+
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            offset = DpOffset(x = 0.dp, y = 12.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.ExitToApp,
+                                            contentDescription = "注销图标",
+                                            tint = Color.Red,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = if (isLoggingOut) "正在注销..." else "注销登录",
+                                            color = Color.Red,
+                                            fontWeight = FontWeight.W500
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    expanded = false
+                                    onLogoutClick()
+                                }
+                            )
+                        }
+                    }
                 }
-            }
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("🛡️ 密码列表区域")
         }
     }
 }
