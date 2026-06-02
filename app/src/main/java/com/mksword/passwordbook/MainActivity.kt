@@ -9,6 +9,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -153,7 +155,33 @@ fun LoginScreen(onLoginClick: () -> Unit) {
 
 @Composable
 fun MainAppContent(onLogoutClick: () -> Unit) {
-    Text(text = "🛡️ 硬件保密区域已解锁")
-    Spacer(modifier = Modifier.height(24.dp))
-    Button(onClick = onLogoutClick) { Text("销毁会话退出") }
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("密码本", style = MaterialTheme.typography.headlineMedium)
+            Box {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(Icons.Default.AccountCircle, contentDescription = "用户信息")
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("注销") },
+                        onClick = {
+                            expanded = false
+                            onLogoutClick()
+                        }
+                    )
+                }
+            }
+        }
+    }
 }
