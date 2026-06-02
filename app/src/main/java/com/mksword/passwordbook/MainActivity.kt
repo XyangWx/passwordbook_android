@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,7 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -33,9 +33,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Card
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -59,18 +59,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mksword.passwordbook.entities.PasswordBook
 import com.mksword.passwordbook.auth.AuthManager
+import com.mksword.passwordbook.entities.PasswordBook
 import com.mksword.passwordbook.network.PasswordBookApiClient
 import com.mksword.passwordbook.ui.theme.XyPasswordBookTheme
-import kotlinx.coroutines.launch
-import net.openid.appauth.*
+import net.openid.appauth.AuthorizationException
+import net.openid.appauth.AuthorizationRequest
+import net.openid.appauth.AuthorizationResponse
+import net.openid.appauth.AuthorizationService
+import net.openid.appauth.EndSessionRequest
+import net.openid.appauth.ResponseTypeValues
 import org.json.JSONObject
+import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
 
@@ -170,7 +173,7 @@ class MainActivity : ComponentActivity() {
                                     if (config?.endSessionEndpoint != null) {
                                         val logoutRequest = EndSessionRequest.Builder(config)
                                             .setIdTokenHint(AuthManager.authState.idToken)
-                                            .setPostLogoutRedirectUri(android.net.Uri.parse(AuthManager.LOGOUT_REDIRECT_URI))
+                                            .setPostLogoutRedirectUri(AuthManager.LOGOUT_REDIRECT_URI.toUri())
                                             .build()
                                         logoutLauncher.launch(authService.getEndSessionRequestIntent(logoutRequest))
                                     } else {
@@ -193,7 +196,7 @@ class MainActivity : ComponentActivity() {
                                                 config,
                                                 AuthManager.CLIENT_ID,
                                                 ResponseTypeValues.CODE,
-                                                android.net.Uri.parse(AuthManager.REDIRECT_URI)
+                                                AuthManager.REDIRECT_URI.toUri()
                                             ).setScopes("openid", "profile", "email").build()
                                             loginLauncher.launch(authService.getAuthorizationRequestIntent(authRequest))
                                         }
@@ -227,9 +230,10 @@ private fun parseUserNameFromToken(token: String): String {
             val name = json.optString("name", "").trim()
             val surname = json.optString("surname", "")
             val finalName = (surname + name).trim()
-            if (finalName.isNotEmpty()) finalName else "User"
+            finalName.ifEmpty { "User" }
         }
     } catch (e: Exception) {
+        e.printStackTrace()
         "User"
     }
 }
@@ -251,6 +255,7 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
             passwordBooks = PasswordBookApiClient.getPasswordBooks()
         } catch (e: Exception) {
             // 错误处理
+            e.printStackTrace()
         } finally {
             isLoading = false
         }
