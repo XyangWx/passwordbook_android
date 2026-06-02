@@ -3,22 +3,15 @@ package com.mksword.passwordbook.network
 import com.mksword.passwordbook.BuildConfig
 import com.mksword.passwordbook.auth.AuthManager
 import com.mksword.passwordbook.entities.*
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
-import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import retrofit2.Retrofit
-import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import retrofit2.http.*
 import java.io.IOException
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import retrofit2.Retrofit
+import retrofit2.http.*
 
-/**
- * 1. 使用 Retrofit 标准声明后端提供的所有业务路由 (等同于 Dio 的路由映射)
- */
 interface PasswordBookService {
     @GET("api/password-book")
     suspend fun getPasswordBooks(): retrofit2.Response<PasswordBookListResponse>
@@ -62,72 +55,34 @@ interface PasswordBookService {
     ): retrofit2.Response<Unit>
 }
 
-/**
- * 2. 核心网络控制中心：管理 OkHttp 拦截器并向上提供单例调用（完美平替 Dio 的 Client）
- */
 object PasswordBookApiClient {
 
-    // 配置通用的 kotlinx.serialization JSON 转换器规则
     private val jsonConfig = Json {
-        ignoreUnknownKeys = true // 容错处理：当后端返回非预期新属性时不崩溃
-        coerceInputValues = true // 容错处理：自动映射空安全默认值
+        ignoreUnknownKeys = true
+        coerceInputValues = true
     }
 
     private val apiService: PasswordBookService by lazy {
-
-        // 🟢 核心平替：构建具有安全 Token 注入和 401 监听机制的 OkHttpClient 拦截器
         val okHttpClient = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
-            .addInterceptor(Interceptor { chain ->
-                val originalRequest = chain.request()
-                val requestBuilder = originalRequest.newBuilder()
-
-                // 借助 CountDownLatch 在子线程中安全同步获取 ValidAccessToken
-                var validToken: String? = null
-                val latch = CountDownLatch(1)
-                AuthManager.getValidAccessToken { token, _ ->
-                    validToken = token
-                    latch.countDown()
-                }
-                latch.await(10, TimeUnit.SECONDS)
-
-                // 🛠️ 完美平替 Dio 中注入的 ABP 跨域身份验证上下文请求头
-                if (!validToken.isNullOrBlank()) {
-                    requestBuilder.header("Authorization", "Bearer $validToken")
-                }
-                requestBuilder.header("X-Requested-With", "XMLHttpRequest")
-                requestBuilder.header("Accept", "application/json")
-
-                val response = chain.proceed(requestBuilder.build())
-
-                // 🟢 401 全局网络状态判定与安全退出兜底
-                if (response.code == 401) {
-                    println("❌ [API 异常] 访问令牌已被服务器判定失效 (401)，可能由于 Session 被远端清理")
-                    // 在此处可配合回调或发送事件总线通知 UI 彻底退回登录页
-                }
-
-                response
-            })
+            // 完美绑定修好的独立拦截器
+            .addInterceptor(OauthInterceptor())
             .build()
 
-        // 绑定包含动态参数 BuildConfig.API_URI 的全套路由服务
         Retrofit.Builder()
             .baseUrl(BuildConfig.API_URI)
             .client(okHttpClient)
+            // ➔ 编译修复：现在在这里调用 asConverterFactory 将畅通无阻
             .addConverterFactory(jsonConfig.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(PasswordBookService::class.java)
     }
 
-    /**
-     * 执行底层的网络状态码校验（高内聚函数，减少各 API 的冗余 try-catch）
-     */
     private fun <T> handleNetworkResponse(response: retrofit2.Response<T>): T {
         when (response.code()) {
             401 -> throw IOException("用户未登录或访问令牌已过期，请重新登录 (401)")
             200, 201, 204 -> {
-                // 如果是空请求体（如删除或创建），直接返回一个无意义结果
                 if (response.body() == null && response.code() in listOf(201, 204)) {
                     @Suppress("UNCHECKED_CAST")
                     return Unit as T
@@ -137,10 +92,6 @@ object PasswordBookApiClient {
             else -> throw IOException("服务器请求失败，状态码: ${response.code()}")
         }
     }
-
-    // =========================================================================
-    // 3. 对外业务接口函数调用（完全对齐您的 8 个 Flutter 核心 API 异步方法）
-    // =========================================================================
 
     suspend fun getPasswordBooks(): List<PasswordBook> {
         return try {
