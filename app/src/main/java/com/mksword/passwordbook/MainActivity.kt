@@ -216,6 +216,7 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                     ),
                     windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
                     actions = {
+                    Box(contentAlignment = Alignment.TopEnd) {
                         TextButton(
                             onClick = { if (!isLoggingOut) expanded = true },
                             enabled = !isLoggingOut,
@@ -249,7 +250,12 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                         DropdownMenu(
                             expanded = expanded,
                             onDismissRequest = { expanded = false },
-                            offset = DpOffset(x = 0.dp, y = 8.dp)
+                            offset = DpOffset(x = 0.dp, y = 4.dp),
+                            properties = androidx.compose.ui.window.PopupProperties(
+                                focusable = true,
+                                dismissOnBackPress = true,
+                                dismissOnClickOutside = true
+                            )
                         ) {
                             DropdownMenuItem(
                                 text = {
@@ -275,6 +281,7 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                             )
                         }
                     }
+                }
                 )
             }
         }
