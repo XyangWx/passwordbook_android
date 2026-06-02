@@ -14,7 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -236,7 +236,7 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            imageVector = Icons.Default.ExitToApp,
+                                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                             contentDescription = "注销图标",
                                             tint = Color.Red,
                                             modifier = Modifier.size(18.dp)
