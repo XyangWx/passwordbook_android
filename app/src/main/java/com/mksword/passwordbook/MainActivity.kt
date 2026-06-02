@@ -66,7 +66,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mksword.passwordbook.entities.PasswordBook
 import com.mksword.passwordbook.auth.AuthManager
+import com.mksword.passwordbook.network.PasswordBookApiClient
 import com.mksword.passwordbook.ui.theme.XyPasswordBookTheme
+import kotlinx.coroutines.launch
 import net.openid.appauth.*
 import org.json.JSONObject
 
@@ -241,31 +243,17 @@ fun LoginScreen(onLoginClick: () -> Unit) {
 @Composable
 fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClick: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    var passwordBooks by remember { mutableStateOf<List<PasswordBook>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
 
-    val passwordBooks = remember {
-        listOf(
-            PasswordBook(
-                id = "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-                name = "Social Life",
-                description = "日常社交与生活",
-                allowedType = 1,
-                entryCount = 5
-            ),
-            PasswordBook(
-                id = "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-                name = "Dev Credentials",
-                description = "开发与服务器凭证",
-                allowedType = 1,
-                entryCount = 14
-            ),
-            PasswordBook(
-                id = "a3d88e91-1b2f-4c3d-9e5f-6a7b8c9d0e1f",
-                name = "Finance Accounts",
-                description = "金融与银行账户",
-                allowedType = 0,
-                entryCount = 3
-            )
-        )
+    LaunchedEffect(Unit) {
+        try {
+            passwordBooks = PasswordBookApiClient.getPasswordBooks()
+        } catch (e: Exception) {
+            // 错误处理
+        } finally {
+            isLoading = false
+        }
     }
 
     Scaffold(
@@ -377,14 +365,24 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
             }
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(passwordBooks, key = { it.id }) { book ->
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(passwordBooks, key = { it.id }) { book ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
