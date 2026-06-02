@@ -67,16 +67,20 @@ android {
 
             val authIssuer = getAuthProperty("AUTH_ISSUER", "PROD_AUTH_ISSUER", "")
             val clientId = getAuthProperty("CLIENT_ID", "PROD_CLIENT_ID", "")
+            val apiUri = getAuthProperty("API_URI", "PROD_API_URI", "")
 
             buildConfigField("String", "AUTH_ISSUER", "\"$authIssuer\"")
             buildConfigField("String", "CLIENT_ID", "\"$clientId\"")
+            buildConfigField("String", "API_URI", "\"$apiUri\"")
         }
         getByName("debug") {
             val authIssuer = getAuthProperty("AUTH_ISSUER_DEBUG", "DEV_AUTH_ISSUER", "https://mksword.com")
             val clientId = getAuthProperty("CLIENT_ID_DEBUG", "DEV_CLIENT_ID", "password_book_app")
+            val apiUri = getAuthProperty("API_URI_DEBUG", "DEV_API_URI", "https://api-test.mksword.com")
 
             buildConfigField("String", "AUTH_ISSUER", "\"$authIssuer\"")
             buildConfigField("String", "CLIENT_ID", "\"$clientId\"")
+            buildConfigField("String", "API_URI", "\"$apiUri\"")
         }
     }
     
