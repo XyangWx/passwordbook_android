@@ -383,47 +383,48 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(passwordBooks, key = { it.id }) { book ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    onClick = {}
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        onClick = {}
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = "密码本图标",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(40.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = book.description ?: "暂无描述",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "密码本图标",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(40.dp)
                             )
+                            Spacer(modifier = Modifier.width(16.dp))
 
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = if (book.allowedType == 0) "Number Only" else "General",
-                                fontSize = 11.sp,
-                                color = Color.Gray
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = book.description ?: "暂无描述",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (book.allowedType == 0) "Number Only" else "General",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            }
+
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "进入",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = "进入",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             }
