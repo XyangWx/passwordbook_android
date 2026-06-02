@@ -188,75 +188,81 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text("Password Book", style = MaterialTheme.typography.titleLarge)
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.inversePrimary
-                ),
-                windowInsets = TopAppBarDefaults.windowInsets,
-                actions = {
-                    TextButton(
-                        onClick = { if (!isLoggingOut) expanded = true },
-                        enabled = !isLoggingOut,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.inversePrimary)
+                .statusBarsPadding()
+            ) {
+                TopAppBar(
+                    title = {
+                        Text("Password Book", style = MaterialTheme.typography.titleLarge)
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    ),
+                    windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
+                    actions = {
+                        TextButton(
+                            onClick = { if (!isLoggingOut) expanded = true },
+                            enabled = !isLoggingOut,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "用户头像",
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = userName,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "下拉箭头",
-                                modifier = Modifier.size(20.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = "用户头像",
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = userName,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "下拉箭头",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            offset = DpOffset(x = 0.dp, y = 8.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                            contentDescription = "注销图标",
+                                            tint = Color.Red,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = if (isLoggingOut) "正在注销..." else "注销登录",
+                                            color = Color.Red,
+                                            fontWeight = FontWeight.W500
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    expanded = false
+                                    onLogoutClick()
+                                }
                             )
                         }
                     }
-
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        offset = DpOffset(x = 0.dp, y = 8.dp)
-                    ) {
-                        DropdownMenuItem(
-                            text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                                        contentDescription = "注销图标",
-                                        tint = Color.Red,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = if (isLoggingOut) "正在注销..." else "注销登录",
-                                        color = Color.Red,
-                                        fontWeight = FontWeight.W500
-                                    )
-                                }
-                            },
-                            onClick = {
-                                expanded = false
-                                onLogoutClick()
-                            }
-                        )
-                    }
-                }
-            )
+                )
+            }
         }
     ) { innerPadding ->
         Box(
