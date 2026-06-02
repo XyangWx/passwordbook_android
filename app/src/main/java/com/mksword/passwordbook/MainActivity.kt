@@ -26,7 +26,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
@@ -271,12 +271,12 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
         topBar = {
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF8BC34A))
+                .background(MaterialTheme.colorScheme.inversePrimary)
                 .statusBarsPadding()
             ) {
                 TopAppBar(
                     title = {
-                        Text("密码本", style = MaterialTheme.typography.titleLarge)
+                        Text("Password Book", style = MaterialTheme.typography.titleLarge)
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
@@ -407,28 +407,24 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
             }
         }
     },
-    persistentFooterButtons = {
-        Box(
+    bottomBar = {
+        Button(
+            onClick = {},
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(48.dp),
+            shape = RectangleShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
-            Button(
-                onClick = {},
-                modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(0.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "新建"
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("新建密码本", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "新建"
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("新建密码本", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
