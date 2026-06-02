@@ -253,7 +253,7 @@ fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClic
                             DropdownMenu(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false },
-                                offset = DpOffset(x = 0.dp, y = 4.dp),
+                                offset = DpOffset(x = 12.dp, y = 4.dp),
                                 properties = androidx.compose.ui.window.PopupProperties(
                                     focusable = true,
                                     dismissOnBackPress = true,
