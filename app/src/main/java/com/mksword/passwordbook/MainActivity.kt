@@ -34,6 +34,7 @@ import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.EndSessionRequest
 import net.openid.appauth.ResponseTypeValues
+import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
 
@@ -137,7 +138,7 @@ class MainActivity : ComponentActivity() {
                                         if (config?.endSessionEndpoint != null) {
                                             val logoutRequest = EndSessionRequest.Builder(config)
                                                 .setIdTokenHint(AuthManager.authState.idToken) // 传入 idToken 告知服务器注销谁
-                                                .setPostLogoutRedirectUri(android.net.Uri.parse(AuthManager.LOGOUT_REDIRECT_URI))
+                                                .setPostLogoutRedirectUri(AuthManager.LOGOUT_REDIRECT_URI.toUri())
                                                 .build()
                                             val logoutIntent = authService.getEndSessionRequestIntent(logoutRequest)
                                             logoutLauncher.launch(logoutIntent)
@@ -158,7 +159,7 @@ class MainActivity : ComponentActivity() {
                                                 config,
                                                 AuthManager.CLIENT_ID,
                                                 ResponseTypeValues.CODE,
-                                                android.net.Uri.parse(AuthManager.REDIRECT_URI)
+                                                AuthManager.REDIRECT_URI.toUri()
                                             ).setScopes("openid", "profile", "email").build()
 
                                             val loginIntent = authService.getAuthorizationRequestIntent(authRequest)
