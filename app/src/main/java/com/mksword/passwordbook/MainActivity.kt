@@ -111,6 +111,10 @@ class MainActivity : ComponentActivity() {
                                 userName = viewModel.userName,
                                 passwordBooks = viewModel.passwordBooks,
                                 isListLoading = viewModel.isListLoading,
+                                // 🟢 完美对接：调用 ViewModel 中真实的 fetchPasswordBooks() 方法
+                                onRefreshList = {
+                                    viewModel.fetchPasswordBooks()
+                                },
                                 onLogoutClick = {
                                     val config = AuthManager.serviceConfig
                                     if (config?.endSessionEndpoint != null) {
