@@ -18,6 +18,7 @@ import com.mksword.passwordbook.auth.AuthManager
 import com.mksword.passwordbook.ui.theme.XyPasswordBookTheme
 import net.openid.appauth.NoClientAuthentication
 import net.openid.appauth.*
+import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
 
@@ -112,7 +113,7 @@ class MainActivity : ComponentActivity() {
                                     if (config?.endSessionEndpoint != null) {
                                         val logoutRequest = EndSessionRequest.Builder(config)
                                             .setIdTokenHint(AuthManager.authState.idToken)
-                                            .setPostLogoutRedirectUri(android.net.Uri.parse(AuthManager.LOGOUT_REDIRECT_URI))
+                                            .setPostLogoutRedirectUri(AuthManager.LOGOUT_REDIRECT_URI.toUri())
                                             .build()
                                         logoutLauncher.launch(authService.getEndSessionRequestIntent(logoutRequest))
                                     } else {
@@ -126,7 +127,8 @@ class MainActivity : ComponentActivity() {
                                     onLoginClick = {
                                         AuthManager.serviceConfig?.let { config ->
                                             val authRequest = AuthorizationRequest.Builder(
-                                                config, AuthManager.CLIENT_ID, ResponseTypeValues.CODE, android.net.Uri.parse(AuthManager.REDIRECT_URI)
+                                                config, AuthManager.CLIENT_ID, ResponseTypeValues.CODE,
+                                                AuthManager.REDIRECT_URI.toUri()
                                             ).setScopes("openid", "profile", "email").build()
                                             loginLauncher.launch(authService.getAuthorizationRequestIntent(authRequest))
                                         }
@@ -143,17 +145,5 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         authService.dispose()
-    }
-}
-
-/**
- * 未登录时的 Compose 界面
- */
-@Composable
-fun LoginScreen(onLoginClick: () -> Unit) {
-    Text(text = "密码本 App", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
-    Spacer(modifier = Modifier.height(24.dp))
-    Button(onClick = onLoginClick) {
-        Text("使用 mksword 账号登录")
     }
 }
