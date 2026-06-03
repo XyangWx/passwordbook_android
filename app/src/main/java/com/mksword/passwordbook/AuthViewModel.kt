@@ -36,13 +36,18 @@ class AuthViewModel : ViewModel() {
      * App 启动初始化
      */
     fun initialize(context: Context, onFail: () -> Unit) {
-        AuthManager.init(context) { success ->
+        val appContext = context.applicationContext
+
+        // 【核心修复】：请把原先写在这里的这行代码【完全删掉】！
+        // PasswordBookApiClient.init(appContext) ➔ 已成功上移到 MainActivity.kt
+
+        AuthManager.init(appContext) { success ->
             isInitialized = success
             if (success) {
                 isLoggedIn = AuthManager.authState.isAuthorized
                 if (isLoggedIn) {
                     userName = parseUserNameFromToken(AuthManager.authState.accessToken ?: "")
-                    fetchPasswordBooks() // 已登录状态下，自动联网加载列表
+                    fetchPasswordBooks() // 此时由于全局 ApiClient 已经就绪，这里将绝对安全出数
                 }
             } else {
                 onFail()
