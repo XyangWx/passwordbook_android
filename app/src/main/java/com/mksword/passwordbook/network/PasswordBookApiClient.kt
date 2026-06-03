@@ -1,7 +1,7 @@
 package com.mksword.passwordbook.network
 
+import android.content.Context
 import com.mksword.passwordbook.BuildConfig
-import com.mksword.passwordbook.auth.AuthManager
 import com.mksword.passwordbook.entities.*
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
@@ -11,6 +11,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import retrofit2.Retrofit
 import retrofit2.http.*
+
 
 interface PasswordBookService {
     @GET("api/password-book")
@@ -62,18 +63,23 @@ object PasswordBookApiClient {
         coerceInputValues = true
     }
 
-    private val apiService: PasswordBookService by lazy {
+    // 【核心修复】：彻底删除了原本写在这里的另一个 by lazy 声明，从而完美消除 Conflicting 冲突
+    private lateinit var apiService: PasswordBookService
+
+    /**
+     * 在全局初始化网络层（由 AuthViewModel 统一开机唤醒）
+     */
+    fun init(context: Context) {
         val okHttpClient = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
-            // 完美绑定修好的独立拦截器
-            .addInterceptor(OauthInterceptor())
+            // 完美绑定包含上下文的拦截器
+            .addInterceptor(OauthInterceptor(context.applicationContext))
             .build()
 
-        Retrofit.Builder()
+        apiService = Retrofit.Builder()
             .baseUrl(BuildConfig.API_URI)
             .client(okHttpClient)
-            // ➔ 编译修复：现在在这里调用 asConverterFactory 将畅通无阻
             .addConverterFactory(jsonConfig.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(PasswordBookService::class.java)
