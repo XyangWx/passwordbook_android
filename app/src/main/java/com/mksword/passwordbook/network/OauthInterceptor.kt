@@ -1,21 +1,25 @@
 package com.mksword.passwordbook.network
 
+import android.content.Context
 import com.mksword.passwordbook.auth.AuthManager
 import okhttp3.Interceptor
 import okhttp3.Response
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-class OauthInterceptor : Interceptor {
+
+// 【核心修复】：在构造函数中要求传入 context，并自动将其转换为全生命周期安全的 applicationContext
+class OauthInterceptor(context: Context) : Interceptor {
+
+    private val appContext = context.applicationContext
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         val requestBuilder = originalRequest.newBuilder()
         val host = originalRequest.url.host
 
-        // 1. 【完美修复】：修正宿主判定。只要是发往授权服务器的域名，或者是动态获取的 Issuer 域名，直接放行，绝不带令牌。
-        // 同时根据您之前的配置，将原先错误的 "://mksword.com" 修正为干净的关键字匹配
+        // 1. 宿主域名过滤拦截
         if (host.contains("mksword.com")) {
-            // 如果请求的本身就是授权服务（如 fetchFromIssuer 或换取 Token 的接口），直接放行
             if (originalRequest.url.encodedPath.contains("connect") ||
                 originalRequest.url.encodedPath.contains("oauth2")) {
                 return chain.proceed(originalRequest)
@@ -25,16 +29,16 @@ class OauthInterceptor : Interceptor {
         var validToken: String? = null
         val latch = CountDownLatch(1)
 
-        // 2. 借助 AuthManager 在子线程中安全同步获取最新可用的 Token
-        AuthManager.getValidAccessToken { token, _ ->
+        // 2. 【核心修复】：传入经由构造函数注入的真正的 appContext，满足接口约束并彻底根除内存泄漏！
+        AuthManager.getValidAccessToken(appContext) { token, _ ->
             validToken = token
             latch.countDown()
         }
 
-        // 等待异步刷新（10秒超时防御，防止网络极差时整个 App 彻底卡死在拦截器里）
+        // 等待异步刷新完成（设置超时防死锁）
         latch.await(10, TimeUnit.SECONDS)
 
-        // 3. 【完美修复】：打满令牌并对齐 Flutter 的 ABP 专属跨域认证头上下文，彻底修复潜在的跨域拒绝隐患
+        // 3. 补齐 ABP 跨域身份验证上下文请求头
         if (!validToken.isNullOrBlank()) {
             requestBuilder.header("Authorization", "Bearer $validToken")
         }
@@ -43,9 +47,8 @@ class OauthInterceptor : Interceptor {
 
         val response = chain.proceed(requestBuilder.build())
 
-        // 4. 【全自动感知】：如果在这里抓到了 401 报错，说明远端 Session 已经被彻底清空
         if (response.code == 401) {
-            println("❌ [API 异常] 访问令牌已被服务器判定失效 (401)，可能由于 Session 被远端清理")
+            println("❌ [API 异常] 访问令牌已被服务器判定失效 (401)")
         }
 
         return response
