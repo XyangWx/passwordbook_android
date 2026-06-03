@@ -1,9 +1,11 @@
 package com.mksword.passwordbook
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,9 +15,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.mksword.passwordbook.entities.NewPasswordBookRequest
 import com.mksword.passwordbook.entities.PasswordBook
-import com.mksword.passwordbook.network.PasswordBookApiClient
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppContent(
     userName: String,
@@ -23,90 +25,112 @@ fun MainAppContent(
     isListLoading: Boolean,
     isLoggingOut: Boolean = false,
     onLogoutClick: () -> Unit,
-    onRefreshList: () -> Unit // 🟢 新增：供网络成功后回调父级刷新列表的方法
+    onRefreshList: () -> Unit
 ) {
-    // 1. 业务逻辑控制状态
+    // 页面与表单控制状态
     var isCreatingNewBook by remember { mutableStateOf(false) }
     var currentNewBookRequest by remember { mutableStateOf<NewPasswordBookRequest?>(null) }
     var isFormValid by remember { mutableStateOf(false) }
-
-    // 🟢 新增：网络提交中的 Loading 状态，防止重复点击
     var isSubmitting by remember { mutableStateOf(false) }
 
-    // 2. 引入协程与全局提示组件
+    // 弹窗与二级页面切换状态
+    var showBottomSheet by remember { mutableStateOf(false) }
+    var selectedPasswordBook by remember { mutableStateOf<PasswordBook?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var currentViewBookId by remember { mutableStateOf<String?>(null) }
+
+    val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         topBar = {
-            PasswordBookHeader(
-                userName = userName,
-                isLoggingOut = isLoggingOut,
-                onLogoutClick = onLogoutClick
-            )
+            PasswordBookHeader(userName = userName, isLoggingOut = isLoggingOut, onLogoutClick = onLogoutClick)
         },
-        // 🟢 将提示挂载在 Scaffold 专用的宿主槽位上
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            if (!isCreatingNewBook) {
-                PasswordBookFooter(
-                    onNewBookClick = { isCreatingNewBook = true }
+            // 调度并渲染底栏
+            MainAppFooterDispatcher(
+                isCreatingNewBook = isCreatingNewBook,
+                isFormValid = isFormValid,
+                isSubmitting = isSubmitting,
+                currentNewBookRequest = currentNewBookRequest,
+                currentViewBookId = currentViewBookId,
+                snackbarHostState = snackbarHostState,
+                onRefreshList = onRefreshList,
+                onCloseCreateMode = { isCreatingNewBook = false; currentNewBookRequest = null },
+                onOpenCreateMode = { isCreatingNewBook = true },
+                onCloseDetailMode = { currentViewBookId = null }
+            )
+        }
+    ) { innerPadding ->
+        // 调度并渲染主体 Body
+        when {
+            isCreatingNewBook -> {
+                CreatePasswordBookBody(
+                    modifier = Modifier.padding(innerPadding),
+                    onFormChange = { request, isValid ->
+                        if (!isSubmitting) { currentNewBookRequest = request; isFormValid = isValid }
+                    }
                 )
-            } else {
-                NewBookFooter(
-                    onConfirmClick = {
-                        // 校验通过且不在提交中，才触发网络请求
-                        if (isFormValid && currentNewBookRequest != null && !isSubmitting) {
-                            scope.launch {
-                                try {
-                                    isSubmitting = true
-
-                                    // 🟢 调用 ApiClient 发起网络请求
-                                    PasswordBookApiClient.createPasswordBook(currentNewBookRequest!!)
-
-                                    // 请求成功：刷新外部列表、重置并关闭白板
-                                    onRefreshList()
-                                    isCreatingNewBook = false
-                                    currentNewBookRequest = null
-                                } catch (e: Exception) {
-                                    // 请求失败：停在原处，通过 Snackbar 弹出后端或网络抛出的具体异常
-                                    snackbarHostState.showSnackbar(
-                                        message = e.message ?: "创建密码本失败，请重试"
-                                    )
-                                } finally {
-                                    isSubmitting = false
-                                }
-                            }
-                        }
-                    },
-                    onCancelClick = {
-                        if (!isSubmitting) { // 正在提交时禁止取消
-                            isCreatingNewBook = false
-                            currentNewBookRequest = null
+            }
+            currentViewBookId != null -> {
+                ViewPasswordBookDetailBody(
+                    modifier = Modifier.padding(innerPadding),
+                    passwordBookId = currentViewBookId!!
+                )
+            }
+            else -> {
+                PasswordBookBody(
+                    modifier = Modifier.padding(innerPadding),
+                    passwordBooks = passwordBooks,
+                    isListLoading = isListLoading,
+                    onBookClick = { bookId ->
+                        val targetBook = passwordBooks.find { it.id == bookId }
+                        if (targetBook != null) {
+                            selectedPasswordBook = targetBook
+                            showBottomSheet = true
                         }
                     }
                 )
             }
         }
-    ) { innerPadding ->
-        if (!isCreatingNewBook) {
-            PasswordBookBody(
-                modifier = Modifier.padding(innerPadding),
-                passwordBooks = passwordBooks,
-                isListLoading = isListLoading,
-                onBookClick = { _ -> /* 触发进入二级明细逻辑 */ }
-            )
-        } else {
-            CreatePasswordBookBody(
-                modifier = Modifier.padding(innerPadding),
-                onFormChange = { request, isValid ->
-                    // 提交中时不接收表单的实时变更
-                    if (!isSubmitting) {
-                        currentNewBookRequest = request
-                        isFormValid = isValid
+
+        // 引入抽离出来的底部操作弹窗
+        PasswordBookActionBottomSheet(
+            showBottomSheet = showBottomSheet,
+            sheetState = sheetState,
+            selectedBookName = selectedPasswordBook?.name ?: "",
+            onDismiss = { showBottomSheet = false },
+            onViewClick = {
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    if (!sheetState.isVisible) {
+                        showBottomSheet = false
+                        currentViewBookId = selectedPasswordBook?.id
                     }
                 }
-            )
-        }
+            },
+            onDeleteClick = {
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    if (!sheetState.isVisible) {
+                        showBottomSheet = false
+                        showDeleteDialog = true
+                    }
+                }
+            }
+        )
+
+        // 引入抽离出来的删除确认框
+        PasswordBookDeleteDialog(
+            showDialog = showDeleteDialog,
+            selectedBook = selectedPasswordBook,
+            snackbarHostState = snackbarHostState,
+            onDismiss = { showDeleteDialog = false },
+            onDeleteSuccess = {
+                showDeleteDialog = false
+                selectedPasswordBook = null
+                onRefreshList()
+            }
+        )
     }
 }
