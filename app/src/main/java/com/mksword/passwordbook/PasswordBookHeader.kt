@@ -50,7 +50,7 @@ fun PasswordBookHeader(
 
     Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.inversePrimary).statusBarsPadding()) {
         TopAppBar(
-            title = { Text("Password Book", style = MaterialTheme.typography.titleLarge) },
+            title = { Text("密码本", style = MaterialTheme.typography.titleLarge) },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
             actions = {
