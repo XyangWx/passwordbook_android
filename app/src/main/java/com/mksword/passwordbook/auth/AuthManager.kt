@@ -1,28 +1,25 @@
 package com.mksword.passwordbook.auth
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
 import com.mksword.passwordbook.BuildConfig
 import net.openid.appauth.AuthState
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
 
-
 object AuthManager {
     private const val TAG = "AuthManager"
 
     // 编译期动态参数
-    val CLIENT_ID: String = BuildConfig.CLIENT_ID
-    private val AUTH_ISSUER: String = BuildConfig.AUTH_ISSUER
+    const val CLIENT_ID: String = BuildConfig.CLIENT_ID
+    private const val AUTH_ISSUER: String = BuildConfig.AUTH_ISSUER
 
     // 精确的 Scheme 回调拼写
     const val REDIRECT_URI = "com.mksword.passwordbook://callback"
     const val LOGOUT_REDIRECT_URI = "com.mksword.passwordbook://logout-callback"
 
-    // 可靠的延迟初始化保障，或保持 lateinit 但在 init 入口立刻无条件实例化
     private lateinit var authStore: EncryptedAuthStore
-    private lateinit var authService: AuthorizationService
 
     var serviceConfig: AuthorizationServiceConfiguration? = null
         private set
@@ -34,11 +31,8 @@ object AuthManager {
      * 全局初始化
      */
     fun init(context: Context, onReady: (Boolean) -> Unit) {
-        // 【核心修复】：将这两个硬件级服务的实例化提到最前面！
-        // 这样可以确保无论网络拉取是成功还是失败，后续调用 updateState 或 clearState 绝不会报 lateinit 未初始化闪退
         val appContext = context.applicationContext
         authStore = EncryptedAuthStore(appContext)
-        authService = AuthorizationService(appContext)
 
         // 1. 自动从安全密盘中恢复上一次的登录令牌
         authState = authStore.loadAuthState() ?: AuthState()
@@ -51,11 +45,11 @@ object AuthManager {
 
         // 2. 异步联网拉取发现文档
         AuthorizationServiceConfiguration.fetchFromIssuer(
-            Uri.parse(AUTH_ISSUER)
+            AUTH_ISSUER.toUri()
         ) { config, exception ->
             if (exception != null) {
                 Log.e(TAG, "端点发现失败", exception)
-                onReady(false) // 此时虽然网络失败，但本地 authStore 已经安全就绪
+                onReady(false)
             } else if (config != null) {
                 serviceConfig = config
                 onReady(true)
@@ -68,7 +62,6 @@ object AuthManager {
      */
     fun updateState(updatedState: AuthState) {
         authState = updatedState
-        // 加固保护：确保即便在极端情况下也具备防御力
         if (::authStore.isInitialized) {
             authStore.saveAuthState(updatedState)
         }
@@ -85,10 +78,11 @@ object AuthManager {
     }
 
     /**
-     * 业务网络请求时获取安全有效的 Token（带静默自动刷新机制）
+     * 【核心修复】：由于需要实例化临时的 AuthorizationService，这里增加 context 传参，
+     * 利用方法局部生命周期，确保用完后自动释放，彻底杜绝单项静态引用持有的内存泄漏。
      */
-    fun getValidAccessToken(onResult: (String?, Exception?) -> Unit) {
-        if (!::authService.isInitialized || !::authStore.isInitialized) {
+    fun getValidAccessToken(context: Context, onResult: (String?, Exception?) -> Unit) {
+        if (!::authStore.isInitialized) {
             onResult(null, IllegalStateException("AuthManager 尚未初始化完毕"))
             return
         }
@@ -98,8 +92,14 @@ object AuthManager {
             return
         }
 
+        // 🟢 动态创建局部 Service，绑定当前上下文
+        val temporaryService = AuthorizationService(context.applicationContext)
+
         // 自动计算过期时间并走刷新逻辑
-        authState.performActionWithFreshTokens(authService) { accessToken, _, ex ->
+        authState.performActionWithFreshTokens(temporaryService) { accessToken, _, ex ->
+            // 🟢 核心加固：Token 置换或检查完成后，立刻物理释放局部 Context 链接，防止任何隐式持有
+            temporaryService.dispose()
+
             if (ex != null) {
                 onResult(null, ex)
             } else {
