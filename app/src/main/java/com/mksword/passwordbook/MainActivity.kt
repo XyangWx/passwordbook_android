@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,7 +75,7 @@ class MainActivity : ComponentActivity() {
 
                         // 更新内存状态
                         AuthManager.authState.update(response, exception)
-                        AuthManager.saveState(this@MainActivity)
+                        AuthManager.updateState(AuthManager.authState)
 
                         if (response != null) {
                             // 拿到 Auth Code，立刻去换取真实的 Access Token
@@ -84,7 +83,7 @@ class MainActivity : ComponentActivity() {
                             authService.performTokenRequest(response.createTokenExchangeRequest()) { tokenResponse, tokenException ->
                                 isProcessing = false
                                 AuthManager.authState.update(tokenResponse, tokenException)
-                                AuthManager.saveState(this@MainActivity)
+                                AuthManager.updateState(AuthManager.authState)
 
                                 if (tokenResponse != null) {
                                     isLoggedIn = true
@@ -104,7 +103,7 @@ class MainActivity : ComponentActivity() {
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
                     // 用户在浏览器完成注销动作并跳回 App 后触发
-                    AuthManager.clearState(this@MainActivity)
+                    AuthManager.clearState()
                     isLoggedIn = false
                     Toast.makeText(this@MainActivity, "已安全退出登录", Toast.LENGTH_SHORT).show()
                 }
@@ -143,7 +142,7 @@ class MainActivity : ComponentActivity() {
                                             logoutLauncher.launch(logoutIntent)
                                         } else {
                                             // 服务器无端点时，支持本地强制清理
-                                            AuthManager.clearState(this@MainActivity)
+                                            AuthManager.clearState()
                                             isLoggedIn = false
                                         }
                                     }
