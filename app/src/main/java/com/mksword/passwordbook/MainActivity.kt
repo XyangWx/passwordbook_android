@@ -1,53 +1,22 @@
 package com.mksword.passwordbook
 
 import android.os.Bundle
-import android.util.Base64
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,15 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.mksword.passwordbook.auth.AuthManager
-import com.mksword.passwordbook.entities.PasswordBook
-import com.mksword.passwordbook.network.PasswordBookApiClient
 import com.mksword.passwordbook.ui.theme.XyPasswordBookTheme
 import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
@@ -72,11 +34,10 @@ import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.EndSessionRequest
 import net.openid.appauth.ResponseTypeValues
-import org.json.JSONObject
-import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
 
+    // AppAuth 的核心服务类，负责底层的跳转和交互
     private lateinit var authService: AuthorizationService
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,25 +48,25 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             XyPasswordBookTheme {
-                var isInitialized by remember { mutableStateOf(false) }
-                var isLoggedIn by remember { mutableStateOf(false) }
-                var isProcessing by remember { mutableStateOf(false) }
-                var userName by remember { mutableStateOf("") }
+                // 1. 定义 OIDC 相关的 Compose 响应式状态
+                var isInitialized by remember { mutableStateOf(false) } // 发现文档是否拉取成功
+                var isLoggedIn by remember { mutableStateOf(false) }    // 用户是否处于登录状态
+                var isProcessing by remember { mutableStateOf(false) }  // 换取 Token 期间的加载动画
 
+                // 2. 异步初始化 AuthManager（拉取发现文档并加载本地历史凭证）
                 LaunchedEffect(Unit) {
                     AuthManager.init(this@MainActivity) { success ->
                         isInitialized = success
                         if (success) {
+                            // 检查本地恢复的状态中，是否已经拥有合法的授权
                             isLoggedIn = AuthManager.authState.isAuthorized
-                            if (isLoggedIn) {
-                                userName = parseUserNameFromToken(AuthManager.authState.accessToken ?: "")
-                            }
                         } else {
-                            Toast.makeText(this@MainActivity, "网络连接超时，请重试", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@MainActivity, "初始化 OIDC 失败，请检查网络", Toast.LENGTH_LONG).show()
                         }
                     }
                 }
 
+                // 3. 注册登录跳转的回调接收器（平替传统 Activity 的 onActivityResult）
                 val loginLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) { result ->
@@ -113,92 +74,95 @@ class MainActivity : ComponentActivity() {
                         val response = AuthorizationResponse.fromIntent(result.data!!)
                         val exception = AuthorizationException.fromIntent(result.data)
 
+                        // 更新内存状态
                         AuthManager.authState.update(response, exception)
-                        AuthManager.updateState(AuthManager.authState)
+                        AuthManager.saveState(this@MainActivity)
 
                         if (response != null) {
+                            // 拿到 Auth Code，立刻去换取真实的 Access Token
                             isProcessing = true
                             authService.performTokenRequest(response.createTokenExchangeRequest()) { tokenResponse, tokenException ->
                                 isProcessing = false
                                 AuthManager.authState.update(tokenResponse, tokenException)
-                                AuthManager.updateState(AuthManager.authState)
+                                AuthManager.saveState(this@MainActivity)
 
                                 if (tokenResponse != null) {
                                     isLoggedIn = true
-                                    userName = parseUserNameFromToken(tokenResponse.accessToken ?: "")
-                                    Toast.makeText(this@MainActivity, "安全登录成功", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@MainActivity, "登录成功！", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    Toast.makeText(this@MainActivity, "凭证换取失败", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@MainActivity, "Token 换取失败: ${tokenException?.errorDescription}", Toast.LENGTH_SHORT).show()
                                 }
                             }
+                        } else {
+                            Toast.makeText(this@MainActivity, "登录被取消或失败: ${exception?.errorDescription}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
 
+                // 4. 注册注销（EndSession）跳转的回调接收器
                 val logoutLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
-                    AuthManager.clearState()
+                    // 用户在浏览器完成注销动作并跳回 App 后触发
+                    AuthManager.clearState(this@MainActivity)
                     isLoggedIn = false
-                    userName = ""
-                    Toast.makeText(this@MainActivity, "会话已安全销毁", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "已安全退出登录", Toast.LENGTH_SHORT).show()
                 }
 
-                Box(modifier = Modifier.fillMaxSize()) {
-                    if (!isInitialized) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    } else if (isProcessing) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        if (!isInitialized) {
+                            // 正在联网拉取 https://mksword.com 的发现文档
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("正在加密生成本地安全盘...")
-                        }
-                    } else {
-                        if (isLoggedIn) {
-                            MainAppContent(
-                                userName = userName,
-                                isLoggingOut = false,
-                                onLogoutClick = {
-                                    val config = AuthManager.serviceConfig
-                                    if (config?.endSessionEndpoint != null) {
-                                        val logoutRequest = EndSessionRequest.Builder(config)
-                                            .setIdTokenHint(AuthManager.authState.idToken)
-                                            .setPostLogoutRedirectUri(AuthManager.LOGOUT_REDIRECT_URI.toUri())
-                                            .build()
-                                        logoutLauncher.launch(authService.getEndSessionRequestIntent(logoutRequest))
-                                    } else {
-                                        AuthManager.clearState()
-                                        isLoggedIn = false
-                                        userName = ""
-                                    }
-                                }
-                            )
+                            Text("正在连接认证服务器...")
+                        } else if (isProcessing) {
+                            // 正在拿 Code 换 Token
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("正在安全加密登录...")
                         } else {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
+                            // 核心业务：根据登录状态渲染不同的 Compose 界面
+                            if (isLoggedIn) {
+                                MainAppContent(
+                                    onLogoutClick = {
+                                        val config = AuthManager.serviceConfig
+                                        // 检查发现文档中是否含有标准的注销端点 (end_session_endpoint)
+                                        if (config?.endSessionEndpoint != null) {
+                                            val logoutRequest = EndSessionRequest.Builder(config)
+                                                .setIdTokenHint(AuthManager.authState.idToken) // 传入 idToken 告知服务器注销谁
+                                                .setPostLogoutRedirectUri(android.net.Uri.parse(AuthManager.LOGOUT_REDIRECT_URI))
+                                                .build()
+                                            val logoutIntent = authService.getEndSessionRequestIntent(logoutRequest)
+                                            logoutLauncher.launch(logoutIntent)
+                                        } else {
+                                            // 服务器无端点时，支持本地强制清理
+                                            AuthManager.clearState(this@MainActivity)
+                                            isLoggedIn = false
+                                        }
+                                    }
+                                )
+                            } else {
                                 LoginScreen(
                                     onLoginClick = {
-                                        AuthManager.serviceConfig?.let { config ->
+                                        val config = AuthManager.serviceConfig
+                                        if (config != null) {
+                                            // 构造符合 PKCE 安全标准的 Authorization Code 请求
                                             val authRequest = AuthorizationRequest.Builder(
                                                 config,
                                                 AuthManager.CLIENT_ID,
                                                 ResponseTypeValues.CODE,
-                                                AuthManager.REDIRECT_URI.toUri()
+                                                android.net.Uri.parse(AuthManager.REDIRECT_URI)
                                             ).setScopes("openid", "profile", "email").build()
-                                            loginLauncher.launch(authService.getAuthorizationRequestIntent(authRequest))
+
+                                            val loginIntent = authService.getAuthorizationRequestIntent(authRequest)
+                                            loginLauncher.launch(loginIntent)
                                         }
                                     }
                                 )
@@ -212,227 +176,31 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        authService.dispose()
+        authService.dispose() // 释放 AppAuth 资源，防止内存泄露
     }
 }
 
-private fun parseUserNameFromToken(token: String): String {
-    return try {
-        val parts = token.split(".")
-        if (parts.size < 2) return ""
-        val payload = String(Base64.decode(parts[1], Base64.URL_SAFE))
-        val json = JSONObject(payload)
-        val familyName = json.optString("family_name", "")
-        val givenName = json.optString("given_name", "").trim()
-        if (givenName.isNotEmpty()) {
-            familyName + givenName
-        } else {
-            val name = json.optString("name", "").trim()
-            val surname = json.optString("surname", "")
-            val finalName = (surname + name).trim()
-            finalName.ifEmpty { "User" }
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-        "User"
-    }
-}
-
+/**
+ * 未登录时的 Compose 界面
+ */
 @Composable
 fun LoginScreen(onLoginClick: () -> Unit) {
-    Button(onClick = onLoginClick) { Text("登录") }
+    Text(text = "密码本 App", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
+    Spacer(modifier = Modifier.height(24.dp))
+    Button(onClick = onLoginClick) {
+        Text("使用 mksword 账号登录")
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 登录成功后的业务主界面
+ */
 @Composable
-fun MainAppContent(userName: String, isLoggingOut: Boolean = false, onLogoutClick: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    var passwordBooks by remember { mutableStateOf<List<PasswordBook>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        try {
-            passwordBooks = PasswordBookApiClient.getPasswordBooks()
-        } catch (e: Exception) {
-            // 错误处理
-            e.printStackTrace()
-        } finally {
-            isLoading = false
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.inversePrimary)
-                .statusBarsPadding()
-            ) {
-                TopAppBar(
-                    title = {
-                        Text("密码本", style = MaterialTheme.typography.titleLarge)
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
-                    ),
-                    windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
-                    actions = {
-                        Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                            TextButton(
-                                onClick = { if (!isLoggingOut) expanded = true },
-                                enabled = !isLoggingOut,
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AccountCircle,
-                                        contentDescription = "用户头像",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = userName,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = "下拉箭头",
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-
-                            DropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false },
-                                offset = DpOffset(x = 12.dp, y = 4.dp),
-                                properties = androidx.compose.ui.window.PopupProperties(
-                                    focusable = true,
-                                    dismissOnBackPress = true,
-                                    dismissOnClickOutside = true
-                                )
-                            ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                                                contentDescription = "注销图标",
-                                                tint = Color.Red,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = if (isLoggingOut) "正在注销..." else "注销登录",
-                                                color = Color.Red,
-                                                fontWeight = FontWeight.W500
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        expanded = false
-                                        onLogoutClick()
-                                    }
-                                )
-                            }
-                        }
-                    }
-                )
-            }
-        },
-        bottomBar =  {
-            Button(
-                onClick = {
-                    // 点击"新建密码本"事件留空，后续可用于弹出输入框
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                // 使用 RectangleShape 代替 RoundedCornerShape(0.dp)，性能更好且代码更整洁
-                shape = RectangleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "新建"
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("新建密码本", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    ) { innerPadding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(passwordBooks, key = { it.id }) { book ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        onClick = {}
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = "密码本图标",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = book.description ?: "暂无描述",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = if (book.allowedType == 0) "Number Only" else "General",
-                                    fontSize = 11.sp,
-                                    color = Color.Gray
-                                )
-                            }
-
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "进入",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-        }
+fun MainAppContent(onLogoutClick: () -> Unit) {
+    // 成功获取到 Token，后续可通过 AuthManager.authState.accessToken 请求业务接口
+    Text(text = "欢迎回来，您已成功登录！")
+    Spacer(modifier = Modifier.height(24.dp))
+    Button(onClick = onLogoutClick) {
+        Text("退出登录")
     }
 }
