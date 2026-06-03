@@ -41,10 +41,24 @@ fun PasswordBookBody(
     onBookClick: (String) -> Unit
 ) {
     if (isListLoading) {
+        // 场景 1：正在联网拉取 API
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
+    } else if (passwordBooks.isEmpty()) {
+        // 场景 2：【核心修改】API 返回空数据，完美复刻截图中的居中灰色文字
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "暂无密码本，请点击下方新建",
+                fontSize = 16.sp,
+                color = Color(0xFF9E9E9E) // ➔ 采用标准的灰色视觉，与截图无缝对接
+            )
+        }
     } else {
+        // 场景 3：有数据，正常渲染动态滚动列表 (ListView)
         LazyColumn(
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -63,7 +77,7 @@ fun PasswordBookBody(
                             Text(text = book.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             if (!book.description.isNullOrBlank()) {
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = book.description!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(text = book.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
                             if (!book.creationTime.isNullOrBlank()) {
                                 Spacer(modifier = Modifier.height(6.dp))
