@@ -28,7 +28,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+        com.mksword.passwordbook.network.PasswordBookApiClient.init(this.applicationContext)
+
+        enableEdgeToEdge() // 开启沉浸式
 
         authService = AuthorizationService(this)
 
@@ -129,7 +132,7 @@ class MainActivity : ComponentActivity() {
                                             val authRequest = AuthorizationRequest.Builder(
                                                 config, AuthManager.CLIENT_ID, ResponseTypeValues.CODE,
                                                 AuthManager.REDIRECT_URI.toUri()
-                                            ).setScopes("openid", "profile", "email").build()
+                                            ).setScopes("openid", "profile", "email", "offline_access", "XYPortal").build()
                                             loginLauncher.launch(authService.getAuthorizationRequestIntent(authRequest))
                                         }
                                     }
