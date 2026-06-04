@@ -80,7 +80,9 @@ fun MainAppContent(
                 ViewPasswordBookDetailBody(
                     modifier = Modifier.padding(innerPadding),
                     passwordBookId = currentViewBookId!!,
-                    refreshKey = detailRefreshKey
+                    refreshKey = detailRefreshKey,
+                    onDeleteError = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } },
+                    onRestoreError = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
                 )
             }
             else -> {

@@ -14,26 +14,39 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.mksword.passwordbook.entities.PasswordEntry
 import com.mksword.passwordbook.network.PasswordBookApiClient
+import kotlinx.coroutines.launch
 
 @Composable
 fun ViewPasswordBookDetailBody(
     passwordBookId: String,
     refreshKey: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDeleteError: (String) -> Unit = {},
+    onRestoreError: (String) -> Unit = {}
 ) {
+    val scope = rememberCoroutineScope()
     var responseData by remember(refreshKey) { mutableStateOf<com.mksword.passwordbook.entities.ViewPasswordBookResponse?>(null) }
     var isLoading by remember(refreshKey) { mutableStateOf(true) }
     var errorMessage by remember(refreshKey) { mutableStateOf<String?>(null) }
+    // 用于 delete/restore 成功后触发刷新的计数器
+    var actionRefreshKey by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(passwordBookId, refreshKey) {
+    fun refresh() {
+        actionRefreshKey++
+    }
+
+    LaunchedEffect(passwordBookId, refreshKey, actionRefreshKey) {
         isLoading = true
         errorMessage = null
         try {
@@ -58,7 +71,7 @@ fun ViewPasswordBookDetailBody(
                 )
             }
             responseData != null -> {
-                val entries = responseData!!.passwordEntries // 🟢 如果这里编译报错，请看下方提示改回对应的明细列表属性名
+                val entries = responseData!!.passwordEntries
 
                 if (entries.isEmpty()) {
                     Text(
@@ -75,7 +88,29 @@ fun ViewPasswordBookDetailBody(
                         item { Spacer(modifier = Modifier.height(8.dp)) }
 
                         items(entries) { entry ->
-                            PasswordEntryItem(entry = entry)
+                            PasswordEntryItem(
+                                entry = entry,
+                                onDeleteClick = { e ->
+                                    scope.launch {
+                                        try {
+                                            PasswordBookApiClient.deletePasswordEntry(passwordBookId, e.id)
+                                            refresh()
+                                        } catch (ex: Exception) {
+                                            onDeleteError(ex.message ?: "删除失败")
+                                        }
+                                    }
+                                },
+                                onRestoreClick = { e ->
+                                    scope.launch {
+                                        try {
+                                            PasswordBookApiClient.restorePasswordEntry(passwordBookId, e.id)
+                                            refresh()
+                                        } catch (ex: Exception) {
+                                            onRestoreError(ex.message ?: "恢复失败")
+                                        }
+                                    }
+                                }
+                            )
                         }
 
                         item { Spacer(modifier = Modifier.height(16.dp)) }
