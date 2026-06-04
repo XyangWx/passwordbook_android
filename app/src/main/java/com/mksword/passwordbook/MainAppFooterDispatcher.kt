@@ -20,6 +20,7 @@ fun MainAppFooterDispatcher(
     currentViewBookId: String?,
     snackbarHostState: SnackbarHostState,
     onRefreshList: () -> Unit,
+    onRefreshDetail: () -> Unit,
     onCloseCreateMode: () -> Unit,
     onOpenCreateMode: () -> Unit,
     onCloseDetailMode: () -> Unit
@@ -43,8 +44,8 @@ fun MainAppFooterDispatcher(
                             passwordBookId = currentViewBookId,
                             request = createPasswordRequest
                         )
-                        showAddEntryDialog = false // 创建成功后关闭对话框
-                        onRefreshList()           // 回调刷新当前列表数据
+                        showAddEntryDialog = false
+                        onRefreshDetail()
                     } catch (e: Exception) {
                         // 发生异常时展示 Snackbar 提示
                         snackbarHostState.showSnackbar(e.message ?: "添加密码项失败")

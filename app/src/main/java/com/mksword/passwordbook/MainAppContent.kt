@@ -38,6 +38,7 @@ fun MainAppContent(
     var selectedPasswordBook by remember { mutableStateOf<PasswordBook?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var currentViewBookId by remember { mutableStateOf<String?>(null) }
+    var detailRefreshKey by remember { mutableStateOf(0) }
 
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
@@ -58,6 +59,7 @@ fun MainAppContent(
                 currentViewBookId = currentViewBookId,
                 snackbarHostState = snackbarHostState,
                 onRefreshList = onRefreshList,
+                onRefreshDetail = { detailRefreshKey++ },
                 onCloseCreateMode = { isCreatingNewBook = false; currentNewBookRequest = null },
                 onOpenCreateMode = { isCreatingNewBook = true },
                 onCloseDetailMode = { currentViewBookId = null }
@@ -77,7 +79,8 @@ fun MainAppContent(
             currentViewBookId != null -> {
                 ViewPasswordBookDetailBody(
                     modifier = Modifier.padding(innerPadding),
-                    passwordBookId = currentViewBookId!!
+                    passwordBookId = currentViewBookId!!,
+                    refreshKey = detailRefreshKey
                 )
             }
             else -> {

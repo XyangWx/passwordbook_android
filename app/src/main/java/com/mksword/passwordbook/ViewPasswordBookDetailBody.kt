@@ -26,13 +26,14 @@ import com.mksword.passwordbook.network.PasswordBookApiClient
 @Composable
 fun ViewPasswordBookDetailBody(
     passwordBookId: String,
+    refreshKey: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    var responseData by remember { mutableStateOf<com.mksword.passwordbook.entities.ViewPasswordBookResponse?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var responseData by remember(refreshKey) { mutableStateOf<com.mksword.passwordbook.entities.ViewPasswordBookResponse?>(null) }
+    var isLoading by remember(refreshKey) { mutableStateOf(true) }
+    var errorMessage by remember(refreshKey) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(passwordBookId) {
+    LaunchedEffect(passwordBookId, refreshKey) {
         isLoading = true
         errorMessage = null
         try {
