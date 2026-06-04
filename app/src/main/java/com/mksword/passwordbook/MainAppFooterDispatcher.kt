@@ -32,6 +32,7 @@ fun MainAppFooterDispatcher(
     // 2. 当状态为 true 时，挂载并渲染对话框
     if (showAddEntryDialog && currentViewBookId != null) {
         AddPasswordEntryDialog(
+            passwordBookId = currentViewBookId,
             onDismissRequest = { showAddEntryDialog = false },
             onConfirm = { createPasswordRequest ->
                 scope.launch {

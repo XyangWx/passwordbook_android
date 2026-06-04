@@ -15,13 +15,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.mksword.passwordbook.entities.AllowedType
 import com.mksword.passwordbook.entities.CreatePasswordRequest
+import com.mksword.passwordbook.entities.GetRandomPasswordRequest
+import com.mksword.passwordbook.entities.GetRandomPasswordResponse
 import com.mksword.passwordbook.entities.WeakLevel
+import com.mksword.passwordbook.network.PasswordBookApiClient
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPasswordEntryDialog(
+    passwordBookId: String,
     onDismissRequest: () -> Unit,
     onConfirm: (CreatePasswordRequest) -> Unit
 ) {
@@ -76,20 +81,22 @@ fun AddPasswordEntryDialog(
                 remark = remark, onRemarkChange = { remark = it },
                 isFormValid = isFormValid,
                 onDismissRequest = onDismissRequest,
-                // 点击生成随机密码逻辑
                 onGeneratePasswordClick = {
                     val targetStrengthEnum = strengthOptions.first { it.first == selectedStrengthLabel }.second
+                    val targetTypeInt = typeOptions.first { it.first == selectedTypeLabel }.second
                     scope.launch {
                         try {
-                            // 根据您的 GetRandomPasswordRequest 构造函数进行调整，此处传入选中的强度级别
-                            /*val response = PasswordBookApiClient.generateRandomPassword(
-                                GetRandomPasswordRequest(weakLevel = targetStrengthEnum)
+                            val response = PasswordBookApiClient.generateRandomPassword(
+                                GetRandomPasswordRequest(
+                                    passwordBookId = passwordBookId,
+                                    passwordType = AllowedType.fromValue(targetTypeInt),
+                                    weakLevel = targetStrengthEnum
+                                )
                             )
                             password = response.password
-                            passwordVisible = true // 自动填充后将密码设为可见，方便用户查看
-                             */
+                            passwordVisible = true
                         } catch (e: Exception) {
-                            // 可根据需要进行弹窗提示，此处简单静默或打印
+                            snackbarHostState.showSnackbar(e.message ?: "生成密码失败")
                         }
                     }
                 },
