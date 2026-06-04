@@ -171,5 +171,13 @@ data class CreatePasswordRequest(
         weakLevel: WeakLevel = WeakLevel.VERY_STRONG,
         password: String,
         remark: String? = null
-    ) : this(title, hasUsername, username, passwordType, weakLevel.value, password, remark)
+    ) : this(
+        title = title,
+        hasUsername = hasUsername,
+        username = username,
+        passwordType = passwordType,
+        weakLevelValue = weakLevel.value,
+        password = password,
+        remark = remark
+    )
 }
