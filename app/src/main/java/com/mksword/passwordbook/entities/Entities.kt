@@ -1,5 +1,7 @@
 package com.mksword.passwordbook.entities
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -10,7 +12,7 @@ import kotlinx.serialization.Serializable
 enum class AllowedType(val value: Int, val label: String) {
     NUMERIC_ONLY(0, "NumericOnly"),
     GENERAL(1, "General");
-    
+
     companion object {
         fun fromValue(value: Int) = entries.find { it.value == value } ?: GENERAL
     }
@@ -126,7 +128,7 @@ data class NewPasswordBookRequest(
         specialChars: String = "",
         allowedType: AllowedType = AllowedType.GENERAL
     ) : this(
-        name, description, minLength, maxLength, requireUppercase, 
+        name, description, minLength, maxLength, requireUppercase,
         requireLowercase, requireDigit, requireSpecialChar, specialChars, allowedType.value
     )
 }
@@ -151,11 +153,14 @@ data class GetRandomPasswordRequest(
     ) : this(passwordBookId, minLength, maxLength, passwordType.value, weakLevel.value)
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class CreatePasswordRequest(
     val title: String,
+    @EncodeDefault
     val hasUsername: Boolean = true,
     val username: String? = null,
+    @EncodeDefault
     val passwordType: Int = 0,
     private val weakLevelValue: Int = WeakLevel.VERY_STRONG.value,
     val password: String,
