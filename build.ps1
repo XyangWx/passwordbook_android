@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$o = 'Debug',
     [string]$n = 'xypasswordbook_debug',
     [string]$a = 'https://auth-test.mksword.com',
@@ -9,8 +9,8 @@
 
 $mode = if ($o -eq 'Release') { 'Release' } else { 'Debug' }
 $projectRoot = $PSScriptRoot
-$wrapperJar = Join-Path $projectRoot 'gradle\\wrapper\\gradle-wrapper.jar'
-$javaExe = if ($env:JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\\java.exe' } else { 'java.exe' }
+$wrapperJar = Join-Path $projectRoot 'gradle\wrapper\gradle-wrapper.jar'
+$javaExe = if ($env:JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\java.exe' } else { 'java.exe' }
 
 $gradleArgs = @(
     '-ea', '-Xmx64m', '-Xms64m',
@@ -19,7 +19,7 @@ $gradleArgs = @(
     'org.gradle.wrapper.GradleWrapperMain',
     'clean', "assemble$mode",
     '--no-daemon',
-    "-PAUTH_ISSUER=$env:AUTH_ISSUER -PCLIENT_ID=$c",
+    "-PAUTH_ISSUER=*** -PCLIENT_ID=$c",
     "-PAPI_URI=$I"
 )
 
@@ -28,7 +28,7 @@ Write-Host "APK name: $n"
 
 & $javaExe $gradleArgs
 
-$apkDir = Join-Path $projectRoot "app\\build\\outputs\\apk\\$mode"
+$apkDir = Join-Path $projectRoot "app\build\outputs\apk\$mode"
 $builtApk = Get-ChildItem -Path $apkDir -Filter "*.apk" -File | Select-Object -First 1
 $destApk = Join-Path $apkDir "$n.apk"
 
@@ -50,8 +50,8 @@ if ($builtApk) {
             $sdkDir = $null
             $localProps = Join-Path $projectRoot 'local.properties'
             if (Test-Path $localProps) {
-                $props = Get-Content $localProps | Where-Object { $_ -match 'sdk\.dir\s*=\s*(.+)' }
-                if ($props) { $sdkDir = ($props -replace '.*sdk\.dir\s*=\s*', '').Trim() }
+                $props = Get-Content $localProps | Where-Object { $_ -match 'sdk.dir' }
+                if ($props) { $sdkDir = ($props -split '=')[1].Trim() }
             }
             if (-not $sdkDir -or -not (Test-Path $sdkDir)) {
                 foreach ($base in @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "C:\Android\Sdk", "C:\Users\XuYang\AppData\Local\Android\Sdk", "C:\Program Files\Android\Sdk")) {
@@ -59,54 +59,52 @@ if ($builtApk) {
                 }
             }
 
-            # Parse compileSdk from build.gradle.kts
-            $compileSdk = $null
+            $compileSdk = '36'
             $buildGradle = Join-Path $projectRoot 'app\build.gradle.kts'
             if (Test-Path $buildGradle) {
                 $lines = Get-Content $buildGradle
-                $inCompileSdk = $false
+                $inBlock = $false
                 foreach ($line in $lines) {
-                    if ($line -match '^\s*compileSdk\s*\{') { $inCompileSdk = $true; continue }
-                    if ($inCompileSdk -and $line -match '^\s*minSdk\s*=\s*(\d+)') {
-                        $compileSdk = $matches[1]; break
+                    if ($line -imatch 'compileSdk\s*\{') { $inBlock = $true; continue }
+                    if ($inBlock) {
+                        if ($line -imatch 'minSdk\s*=\s*(\d+)') {
+                            $compileSdk = $matches[1]; break
+                        }
+                        if ($line.Trim() -eq '}') { $inBlock = $false }
                     }
-                    if ($inCompileSdk -and $line -match '^\s*\})') { $inCompileSdk = $false }
                 }
             }
-            if (-not $compileSdk) { $compileSdk = '36' }
 
             $buildToolsDir = $null
             $buildToolsVersion = $null
-            $preferredBtMajor = $compileSdk
+            $btBase = Join-Path $sdkDir 'build-tools'
 
-            $localProps = Join-Path $projectRoot 'local.properties'
-            if (Test-Path $localProps) {
-                $btLine = Get-Content $localProps | Where-Object { $_ -match 'build-tools\s*=\s*(.+)' }
-                if ($btLine) { $buildToolsVersion = ($btLine -replace '.*build-tools\s*=\s*', '').Trim() }
-            }
-
-            if ($sdkDir -and (Test-Path $sdkDir)) {
-                $btBase = Join-Path $sdkDir 'build-tools'
-                if (Test-Path $btBase) {
-                    $candidates = @()
-                    if ($buildToolsVersion) {
-                        $candidate = Join-Path $btBase $buildToolsVersion
-                        if (Test-Path (Join-Path $candidate 'zipalign.exe')) { $candidates += $candidate }
-                    }
-                    $sdkMatched = Get-ChildItem $btBase -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "^$preferredBtMajor\." } | Sort-Object Name -Descending | Select-Object -First 1
-                    if ($sdkMatched -and (Test-Path (Join-Path $sdkMatched.FullName 'zipalign.exe'))) { $candidates += $sdkMatched.FullName }
-                    $latest = Get-ChildItem $btBase -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
-                    if ($latest -and (Test-Path (Join-Path $latest.FullName 'zipalign.exe'))) { $candidates += $latest.FullName }
-                    foreach ($c in $candidates) {
-                        if (-not $buildToolsDir) { $buildToolsDir = $c; $buildToolsVersion = (Split-Path $c -Leaf) }
+            if ($sdkDir -and (Test-Path $btBase)) {
+                $candidates = @()
+                $allBt = Get-ChildItem $btBase -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending
+                foreach ($bt in $allBt) {
+                    if ($bt.Name -match "^$compileSdk\.") {
+                        $z = Join-Path $bt.FullName 'zipalign.exe'
+                        if (Test-Path $z) { $candidates += $bt.FullName }
                     }
                 }
+                if (-not $candidates.Count) {
+                    foreach ($bt in $allBt) {
+                        $z = Join-Path $bt.FullName 'zipalign.exe'
+                        if (Test-Path $z) { $candidates += $bt.FullName; break }
+                    }
+                }
+                if ($candidates.Count) { $buildToolsDir = $candidates[0]; $buildToolsVersion = (Split-Path $buildToolsDir -Leaf) }
             }
 
+            Write-Host "sdk dir: $sdkDir"
+            Write-Host "compileSdk: $compileSdk"
+            Write-Host "expected bt: $btBase\$compileSdk.x.x"
             Write-Host "jks path: $jksPath"
             Write-Host "alias: $alias"
-            Write-Host "sdk dir: $sdkDir"
-            Write-Host "build-tools: $buildToolsDir"
+            Write-Host "build-tools dir: $buildToolsDir"
+            Write-Host "zipalign: $(Join-Path $buildToolsDir 'zipalign.exe')"
+            Write-Host "apksigner: $(Join-Path $buildToolsDir 'apksigner.bat')"
 
             if ($buildToolsDir) {
                 $zipalign = Join-Path $buildToolsDir 'zipalign.exe'
