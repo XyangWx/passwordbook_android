@@ -48,17 +48,64 @@ if ($builtApk) {
         }
 
         if ($jksPath) {
-            # Find Android SDK build-tools
-            $sdkBuildTools = $null
-            $searchBases = @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "C:\\Android\\Sdk", "C:\\Users\\XuYang\\AppData\\Local\\Android\\Sdk", "C:\\Program Files\\Android\\Sdk")
-            foreach ($base in $searchBases) {
-                if ($base -and (Test-Path $base)) {
-                    $btDir = Join-Path $base 'build-tools'
+            # Find Android SDK: check env vars first, then local.properties
+            $sdkDir = $null
+            if ($env:ANDROID_HOME) { $sdkDir = $env:ANDROID_HOME }
+            elseif ($env:ANDROID_SDK_ROOT) { $sdkDir = $env:ANDROID_SDK_ROOT }
+            else {
+                $lp = Join-Path $projectRoot 'local.properties'
+                if (Test-Path $lp) {
+                    $content = Get-Content $lp -Raw
+                    if ($content -match 'sdk\.dir\s*=\s*(.+)') {
+                        $sdkDir = $Matches[1].Trim()
+                    }
+                }
+            }
+
+            # Find build-tools version from project
+            $buildToolsVersion = $null
+            $btSearch = @(
+                (Join-Path $projectRoot 'build.gradle.kts'),
+                (Join-Path $projectRoot 'app\build.gradle.kts'),
+                (Join-Path $projectRoot 'gradle\libs.versions.toml')
+            )
+            foreach ($f in $btSearch) {
+                if (Test-Path $f) {
+                    $content = Get-Content $f -Raw
+                    if ($content -match 'buildToolsVersion["']?\s*["']?([0-9]+\.[0-9]+)') {
+                        $buildToolsVersion = $Matches[1].Trim()
+                        break
+                    }
+                    if ($content -match '"android\.build\.tools"\s*["']:\s*["']([^"']+)"') {
+                        $buildToolsVersion = $Matches[1].Trim()
+                        break
+                    }
+                }
+            }
+
+            # Find zipalign/apksigner
+            $zipalign = $null
+            $apksignerBat = $null
+            if ($sdkDir) {
+                if ($buildToolsVersion) {
+                    $btDir = Join-Path $sdkDir "build-tools\$buildToolsVersion"
                     if (Test-Path $btDir) {
-                        $latest = Get-ChildItem $btDir -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+                        $zipalign = Join-Path $btDir 'zipalign.exe'
+                        $apksignerBat = Join-Path $btDir 'apksigner.bat'
+                        if (-not (Test-Path $zipalign)) { $zipalign = $null }
+                        if (-not (Test-Path $apksignerBat)) { $apksignerBat = $null }
+                    }
+                }
+                if (-not $zipalign) {
+                    $btBase = Join-Path $sdkDir 'build-tools'
+                    if (Test-Path $btBase) {
+                        $latest = Get-ChildItem $btBase -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
                         if ($latest) {
                             $candidate = Join-Path $latest.FullName 'zipalign.exe'
-                            if (Test-Path $candidate) { $sdkBuildTools = $latest.FullName; break }
+                            if (Test-Path $candidate) {
+                                $zipalign = $candidate
+                                $apksignerBat = Join-Path $latest.FullName 'apksigner.bat'
+                            }
                         }
                     }
                 }
@@ -66,26 +113,27 @@ if ($builtApk) {
 
             Write-Host "jks path: $jksPath"
             Write-Host "alias: $alias"
-            Write-Host "build-tools: $sdkBuildTools"
+            Write-Host "sdk dir: $sdkDir"
+            Write-Host "build-tools: $buildToolsVersion"
+            Write-Host "zipalign: $zipalign"
+            Write-Host "apksigner: $apksignerBat"
 
-            if ($sdkBuildTools) {
-                $zipalign = Join-Path $sdkBuildTools 'zipalign.exe'
-                $apksigner = Join-Path $sdkBuildTools 'apksigner.bat'
+            if ($zipalign -and $apksignerBat) {
                 $alignedApk = Join-Path $apkDir "$n-aligned.apk"
 
-                Write-Host "zipalign: $zipalign"
+                Write-Host "Running zipalign..."
                 & $zipalign @('-v', '4', $destApk, $alignedApk)
                 if ($LASTEXITCODE -ne 0) { Write-Host "zipalign failed." }
                 else {
-                    Write-Host "apksigner sign with $jksPath"
-                    & $apksigner @('sign', '--ks', $jksPath, '--ks-key-alias', $alias, '--out', $destApk, $alignedApk)
+                    Write-Host "Running apksigner..."
+                    & $apksignerBat @('sign', '--ks', $jksPath, '--ks-key-alias', $alias, '--out', $destApk, $alignedApk)
                     if ($LASTEXITCODE -eq 0) {
                         Remove-Item $alignedApk -Force -ErrorAction SilentlyContinue
                         Write-Host "Signed successfully."
                     } else { Write-Host "apksigner sign failed." }
                 }
             } else {
-                Write-Host "Android SDK build-tools not found. Set ANDROID_HOME or ANDROID_SDK_ROOT."
+                Write-Host "Android SDK build-tools not found. Set ANDROID_HOME or add sdk.dir to local.properties."
             }
         }
     }
