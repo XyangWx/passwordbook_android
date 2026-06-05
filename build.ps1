@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$o = 'Debug',
     [string]$n = 'xypasswordbook_debug',
     [string]$a = 'https://auth-test.mksword.com',
@@ -59,9 +59,25 @@ if ($builtApk) {
                 }
             }
 
+            # Parse compileSdk from build.gradle.kts
+            $compileSdk = $null
+            $buildGradle = Join-Path $projectRoot 'app\build.gradle.kts'
+            if (Test-Path $buildGradle) {
+                $lines = Get-Content $buildGradle
+                $inCompileSdk = $false
+                foreach ($line in $lines) {
+                    if ($line -match '^\s*compileSdk\s*\{') { $inCompileSdk = $true; continue }
+                    if ($inCompileSdk -and $line -match '^\s*minSdk\s*=\s*(\d+)') {
+                        $compileSdk = $matches[1]; break
+                    }
+                    if ($inCompileSdk -and $line -match '^\s*\})') { $inCompileSdk = $false }
+                }
+            }
+            if (-not $compileSdk) { $compileSdk = '36' }
+
             $buildToolsDir = $null
             $buildToolsVersion = $null
-            $preferredBtMajor = '36'
+            $preferredBtMajor = $compileSdk
 
             $localProps = Join-Path $projectRoot 'local.properties'
             if (Test-Path $localProps) {
