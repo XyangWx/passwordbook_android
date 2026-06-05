@@ -57,6 +57,14 @@ android {
         buildConfig = true 
     }
 
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val apkName = project.findProperty("APK_OUTPUT_NAME")?.toString() ?: "${project.name}_${buildType.name}"
+            output.outputFileName = "$apkName.apk"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
