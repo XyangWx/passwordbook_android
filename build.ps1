@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$o = 'Debug',
     [string]$n = 'xypasswordbook_debug',
     [string]$a = 'https://auth-test.mksword.com',
@@ -55,7 +55,8 @@ if ($builtApk) {
                     $parts = $props.Split('=', 2)
                     if ($parts.Length -ge 2) {
                         $raw = $parts[1].Trim()
-                        $raw = $raw -replace '\\\\+', '\'
+                        $raw = $raw.Replace("\:", ":")
+                        $raw = $raw.Replace("\\", "\")
                         if ($raw -and (Test-Path $raw)) { $sdkDir = $raw }
                     }
                 }
