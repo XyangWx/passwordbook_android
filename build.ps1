@@ -1,4 +1,4 @@
-﻿param(
+﻿﻿param(
     [string]$o = 'Debug',
     [string]$n = 'xypasswordbook_debug',
     [string]$a = 'https://auth-test.mksword.com',
@@ -66,9 +66,11 @@ if ($builtApk) {
                 }
             }
 
-            # Find build-tools version from local.properties if specified, otherwise latest
+            # Determine build-tools version: local.properties > compileSdk (36.x.x for Android 16) > latest
             $buildToolsDir = $null
             $buildToolsVersion = $null
+            # compileSdk = 36 => prefer build-tools 36.x.x
+            $preferredBtMajor = '36'
 
             $localProps = Join-Path $projectRoot 'local.properties'
             if (Test-Path $localProps) {
@@ -81,15 +83,23 @@ if ($builtApk) {
             if ($sdkDir -and (Test-Path $sdkDir)) {
                 $btBase = Join-Path $sdkDir 'build-tools'
                 if (Test-Path $btBase) {
+                    $candidates = @()
+                    # Try exact version if specified
                     if ($buildToolsVersion) {
                         $candidate = Join-Path $btBase $buildToolsVersion
-                        if (Test-Path (Join-Path $candidate 'zipalign.exe')) { $buildToolsDir = $candidate }
+                        if (Test-Path (Join-Path $candidate 'zipalign.exe')) { $candidates += $candidate }
                     }
-                    if (-not $buildToolsDir) {
-                        $latest = Get-ChildItem $btBase -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
-                        if ($latest -and (Test-Path (Join-Path $latest.FullName 'zipalign.exe'))) {
-                            $buildToolsDir = $latest.FullName
-                            $buildToolsVersion = $latest.Name
+                    # Try compileSdk-matched major version (36 for Android 16)
+                    $sdkMatched = Get-ChildItem $btBase -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "^$preferredBtMajor\." } | Sort-Object Name -Descending | Select-Object -First 1
+                    if ($sdkMatched -and (Test-Path (Join-Path $sdkMatched.FullName 'zipalign.exe'))) { $candidates += $sdkMatched.FullName }
+                    # Fallback: latest
+                    $latest = Get-ChildItem $btBase -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+                    if ($latest -and (Test-Path (Join-Path $latest.FullName 'zipalign.exe'))) { $candidates += $latest.FullName }
+                    # Pick first valid
+                    foreach ($c in $candidates) {
+                        if (-not $buildToolsDir) {
+                            $buildToolsDir = $c
+                            $buildToolsVersion = (Split-Path $c -Leaf)
                         }
                     }
                 }
