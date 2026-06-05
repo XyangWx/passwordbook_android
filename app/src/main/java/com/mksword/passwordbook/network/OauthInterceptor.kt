@@ -1,26 +1,36 @@
 package com.mksword.passwordbook.network
 
+import android.content.Context
 import com.mksword.passwordbook.auth.AuthManager
 import okhttp3.Interceptor
 import okhttp3.Response
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-class OauthInterceptor : Interceptor {
+
+// 【核心修复】：在构造函数中要求传入 context，并自动将其转换为全生命周期安全的 applicationContext
+class OauthInterceptor(context: Context) : Interceptor {
+
+    private val appContext = context.applicationContext
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
-        
-        // 1. 过滤掉不需要 Token 的请求（比如授权服务器自身的请求）
-        if (originalRequest.url.host.contains("://mksword.com")) {
-            return chain.proceed(originalRequest)
+        val requestBuilder = originalRequest.newBuilder()
+        val host = originalRequest.url.host
+
+        // 1. 宿主域名过滤拦截
+        if (host.contains("mksword.com")) {
+            if (originalRequest.url.encodedPath.contains("connect") ||
+                originalRequest.url.encodedPath.contains("oauth2")) {
+                return chain.proceed(originalRequest)
+            }
         }
 
         var validToken: String? = null
         val latch = CountDownLatch(1)
 
-        // 2. 借助我们之前在 AuthManager 中封装的"超能力"方法，
-        // 在子线程中安全、同步地获取最新的 Token（若快过期底层会自动静默刷新）
-        AuthManager.getValidAccessToken { token, error ->
+        // 2. 【核心修复】：传入经由构造函数注入的真正的 appContext，满足接口约束并彻底根除内存泄漏！
+        AuthManager.getValidAccessToken(appContext) { token, _ ->
             validToken = token
             latch.countDown()
         }
@@ -28,15 +38,19 @@ class OauthInterceptor : Interceptor {
         // 等待异步刷新完成（设置超时防死锁）
         latch.await(10, TimeUnit.SECONDS)
 
-        // 3. 如果成功拿到 Token，自动塞进 HTTP 請求头的 Authorization 中
-        return if (!validToken.isNullOrBlank()) {
-            val authenticatedRequest = originalRequest.newBuilder()
-                .header("Authorization", "Bearer $validToken")
-                .build()
-            chain.proceed(authenticatedRequest)
-        } else {
-            // 如果拿不到 Token（说明 Refresh Token 也过期了，需要彻底重新登录）
-            chain.proceed(originalRequest)
+        // 3. 补齐 ABP 跨域身份验证上下文请求头
+        if (!validToken.isNullOrBlank()) {
+            requestBuilder.header("Authorization", "Bearer $validToken")
         }
+        requestBuilder.header("X-Requested-With", "XMLHttpRequest")
+        requestBuilder.header("Accept", "application/json")
+
+        val response = chain.proceed(requestBuilder.build())
+
+        if (response.code == 401) {
+            println("❌ [API 异常] 访问令牌已被服务器判定失效 (401)")
+        }
+
+        return response
     }
 }

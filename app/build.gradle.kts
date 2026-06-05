@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // 【新增】安全读取编译参数/系统变量/本地文件的辅助函数
@@ -66,16 +67,20 @@ android {
 
             val authIssuer = getAuthProperty("AUTH_ISSUER", "PROD_AUTH_ISSUER", "")
             val clientId = getAuthProperty("CLIENT_ID", "PROD_CLIENT_ID", "")
+            val apiUri = getAuthProperty("API_URI", "PROD_API_URI", "")
 
             buildConfigField("String", "AUTH_ISSUER", "\"$authIssuer\"")
             buildConfigField("String", "CLIENT_ID", "\"$clientId\"")
+            buildConfigField("String", "API_URI", "\"$apiUri\"")
         }
         getByName("debug") {
             val authIssuer = getAuthProperty("AUTH_ISSUER_DEBUG", "DEV_AUTH_ISSUER", "https://mksword.com")
             val clientId = getAuthProperty("CLIENT_ID_DEBUG", "DEV_CLIENT_ID", "password_book_app")
+            val apiUri = getAuthProperty("API_URI_DEBUG", "DEV_API_URI", "https://api-test.mksword.com")
 
             buildConfigField("String", "AUTH_ISSUER", "\"$authIssuer\"")
             buildConfigField("String", "CLIENT_ID", "\"$clientId\"")
+            buildConfigField("String", "API_URI", "\"$apiUri\"")
         }
     }
     
@@ -93,6 +98,12 @@ dependencies {
 
     // OkHttp 网络库
     implementation(libs.okhttp.core)
+
+    // Kotlin 序列化
+    implementation(libs.kotlinx.serialization.json)
+
+    // Material Icons
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Android 官方加密存储库
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
@@ -115,4 +126,11 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    
+    // 【新增】：引入 Retrofit 网络架构核心及其 kotlinx 官方专用强类型 JSON 适配工厂
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
+
+    // 【必须追加】：引入 Activity 级的高阶 ViewModel 委托扩展支持
+    implementation("androidx.activity:activity-ktx:1.9.0")
 }
