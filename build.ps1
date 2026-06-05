@@ -16,9 +16,9 @@ $gradleArgs = @(
     '-Dorg.gradle.appname=gradlew',
     '-classpath', $wrapperJar,
     'org.gradle.wrapper.GradleWrapperMain',
-    "-PAUTH_ISSUER=*** -PCLIENT_ID=$c",
+    'clean', "assemble$mode",
     '--no-daemon',
-    "-PAUTH_ISSUER=***    "-PCLIENT_ID=$c",
+    "-PAUTH_ISSUER=*** -PCLIENT_ID=$c",
     "-PAPI_URI=$I"
 )
 
