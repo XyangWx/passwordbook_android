@@ -27,12 +27,13 @@ Write-Host "APK name: $n"
 
 & $javaExe $gradleArgs
 
-$builtApk = Join-Path $projectRoot "app\build\outputs\apk\$mode\app-$mode.apk"
-$destApk = Join-Path $projectRoot "app\build\outputs\apk\$mode\$n.apk"
+$apkDir = Join-Path $projectRoot "app\build\outputs\apk\$mode"
+$builtApk = Get-ChildItem -Path $apkDir -Filter "*.apk" -File | Select-Object -First 1
+$destApk = Join-Path $apkDir "$n.apk"
 
-if (Test-Path $builtApk) {
-    Rename-Item -Path $builtApk -NewName "$n.apk" -Force
+if ($builtApk) {
+    Rename-Item -Path $builtApk.FullName -NewName "$n.apk" -Force
     Write-Host "Output: $destApk"
 } else {
-    Write-Host "APK not found: $builtApk"
+    Write-Host "APK not found in: $apkDir"
 }
