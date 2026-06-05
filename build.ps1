@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$o = 'Debug',
     [string]$n = 'xypasswordbook_debug',
     [string]$a = 'https://auth-test.mksword.com',
@@ -30,10 +30,10 @@ Write-Host "APK name: $n"
 
 $apkDir = Join-Path $projectRoot "app\build\outputs\apk\$mode"
 $builtApk = Get-ChildItem -Path $apkDir -Filter "*.apk" -File | Select-Object -First 1
-$destApk = Join-Path $apkDir "$n.apk"
+$destApk = Join-Path $apkDir "$n-signed.apk"
 
 if ($builtApk) {
-    Rename-Item -Path $builtApk.FullName -NewName "$n.apk" -Force
+    Rename-Item -Path $builtApk.FullName -NewName "$n-signed.apk" -Force
     Write-Host "Output: $destApk"
 
     if ($CA -ne '') {
