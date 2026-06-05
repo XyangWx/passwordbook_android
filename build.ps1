@@ -3,7 +3,8 @@
     [string]$n = 'xypasswordbook_debug',
     [string]$a = 'https://auth-test.mksword.com',
     [string]$c = 'password_book_app',
-    [string]$I = 'https://api-test.mksword.com'
+    [string]$I = 'https://api-test.mksword.com',
+    [string]$C = ''
 )
 
 $mode = if ($o -eq 'Release') { 'Release' } else { 'Debug' }
@@ -34,6 +35,31 @@ $destApk = Join-Path $apkDir "$n.apk"
 if ($builtApk) {
     Rename-Item -Path $builtApk.FullName -NewName "$n.apk" -Force
     Write-Host "Output: $destApk"
+
+    # Sign APK if -C is provided (format: path@password or path@'password with @')
+    if ($C -ne '') {
+        $atIndex = $C.LastIndexOf('@')
+        if ($atIndex -gt 0) {
+            $jksPath = $C.Substring(0, $atIndex)
+            $jksPwdRaw = $C.Substring($atIndex + 1)
+            if ($jksPwdRaw.StartsWith("'") -and $jksPwdRaw.EndsWith("'")) {
+                $jksPwd = $jksPwdRaw.Substring(1, $jksPwdRaw.Length - 2)
+            } else {
+                $jksPwd = $jksPwdRaw
+            }
+            $signedApk = Join-Path $apkDir "$n.apk"
+            $jarsigner = if ($env.JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\jarsigner.exe' } else { 'jarsigner.exe' }
+            Write-Host "Signing: $signedApk with $jksPath"
+            & $jarsigner -keystore $jksPath -storepass $jksPwd -signedjar $signedApk $signedApk $jksPath
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "Signed successfully."
+            } else {
+                Write-Host "Signing failed."
+            }
+        } else {
+            Write-Host "Invalid -C format. Use: path@password or path@'password with @'"
+        }
+    }
 } else {
     Write-Host "APK not found in: $apkDir"
 }
