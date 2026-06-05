@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # 默认值
 BUILD_MODE="Debug"
