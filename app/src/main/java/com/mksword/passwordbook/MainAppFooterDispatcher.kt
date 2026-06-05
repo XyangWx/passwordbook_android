@@ -34,7 +34,6 @@ fun MainAppFooterDispatcher(
     if (showAddEntryDialog && currentViewBookId != null) {
         AddPasswordEntryDialog(
             passwordBookId = currentViewBookId,
-            snackbarHostState = snackbarHostState,
             onDismissRequest = { showAddEntryDialog = false },
             onConfirm = { createPasswordRequest ->
                 scope.launch {
