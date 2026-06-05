@@ -83,6 +83,9 @@ if ($builtApk) {
                 $jarsigner = 'jarsigner.exe'
             }
 
+            Write-Host "jarsigner: $jarsigner"
+            Write-Host "jks path: $jksPath"
+            Write-Host "password: $jksPwd"
             Write-Host "Signing: $signedApk with $jksPath"
             & $jarsigner @('-keystore', $jksPath, '-storepass', $jksPwd, '-signedjar', $signedApk, $signedApk, $jksPath)
             if ($LASTEXITCODE -eq 0) {
