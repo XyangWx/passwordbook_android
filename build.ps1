@@ -9,8 +9,8 @@
 
 $mode = if ($o -eq 'Release') { 'Release' } else { 'Debug' }
 $projectRoot = $PSScriptRoot
-$wrapperJar = Join-Path $projectRoot 'gradle\wrapper\gradle-wrapper.jar'
-$javaExe = if ($env:JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\java.exe' } else { 'java.exe' }
+$wrapperJar = Join-Path $projectRoot 'gradle\\wrapper\\gradle-wrapper.jar'
+$javaExe = if ($env:JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\\java.exe' } else { 'java.exe' }
 
 $gradleArgs = @(
     '-ea', '-Xmx64m', '-Xms64m',
@@ -28,7 +28,7 @@ Write-Host "APK name: $n"
 
 & $javaExe $gradleArgs
 
-$apkDir = Join-Path $projectRoot "app\build\outputs\apk\$mode"
+$apkDir = Join-Path $projectRoot "app\\build\\outputs\\apk\\$mode"
 $builtApk = Get-ChildItem -Path $apkDir -Filter "*.apk" -File | Select-Object -First 1
 $destApk = Join-Path $apkDir "$n.apk"
 
@@ -37,69 +37,73 @@ if ($builtApk) {
     Write-Host "Output: $destApk"
 
     if ($CA -ne '') {
-        # Split at FIRST @ (password may contain @)
-        $atIndex = $CA.IndexOf('@')
-        if ($atIndex -gt 0) {
-            $jksPath = $CA.Substring(0, $atIndex)
-            $jksPwdRaw = $CA.Substring($atIndex + 1)
-            # Unquote if wrapped in single quotes
-            if ($jksPwdRaw.StartsWith("'") -and $jksPwdRaw.EndsWith("'")) {
-                $jksPwd = $jksPwdRaw.Substring(1, $jksPwdRaw.Length - 2)
-            } else {
-                $jksPwd = $jksPwdRaw
-            }
-            $signedApk = $destApk
+        # Format: --ks <path> --ks-key-alias <alias>@<password>  or  --ks <path> --ks-key-alias <alias>@'<password with @>'
+        $ksIdx = $CA.IndexOf('--ks')
+        $aliasIdx = $CA.IndexOf('--ks-key-alias')
+        if ($ksIdx -ge 0 -and $aliasIdx -gt $ksIdx) {
+            $ksPart = $CA.Substring($ksIdx + 4, $aliasIdx - $ksIdx - 4).Trim()
+            $aliasPart = $CA.Substring($aliasIdx + 16).Trim()
 
-            # Find jarsigner: try JAVA_HOME, then from java.exe path, then search common JDK paths
-            $jarsigner = $null
-            if ($env:JAVA_HOME) {
-                $candidate = Join-Path $env.JAVA_HOME 'bin\jarsigner.exe'
-                if (Test-Path $candidate) { $jarsigner = $candidate }
-            }
-            if (-not $jarsigner) {
-                $javaCmd = Get-Command java.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-                if ($javaCmd) {
-                    $javaBin = Split-Path $javaCmd.Source
-                    $jdkRoot = Split-Path $javaBin
-                    $candidate = Join-Path $jdkRoot 'jarsigner.exe'
-                    if (Test-Path $candidate) { $jarsigner = $candidate }
+            $aliasAtIdx = $aliasPart.IndexOf('@')
+            if ($aliasAtIdx -gt 0) {
+                $jksPath = $ksPart
+                $alias = $aliasPart.Substring(0, $aliasAtIdx)
+                $jksPwdRaw = $aliasPart.Substring($aliasAtIdx + 1)
+                if ($jksPwdRaw.StartsWith("'") -and $jksPwdRaw.EndsWith("'")) {
+                    $jksPwd = $jksPwdRaw.Substring(1, $jksPwdRaw.Length - 2)
+                } else {
+                    $jksPwd = $jksPwdRaw
                 }
+            } else {
+                $jksPath = $null
+                Write-Host "Invalid -CA format. Use: --ks <path> --ks-key-alias <alias>@<password>"
             }
-            if (-not $jarsigner) {
-                $searchBases = @(
-                    "${env:ProgramFiles}\Java",
-                    "${env:ProgramFiles(x86)}\Java",
-                    "C:\Java",
-                    "C:\Program Files\Android\jdk",
-                    "C:\Android\jdk"
-                )
-                foreach ($base in $searchBases) {
-                    if (Test-Path $base) {
-                        Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-                            $candidate = Join-Path $_.FullName 'bin\jarsigner.exe'
-                            if (-not $jarsigner -and (Test-Path $candidate)) { $jarsigner = $candidate }
+        } else {
+            $jksPath = $null
+            Write-Host "Invalid -CA format. Use: --ks <path> --ks-key-alias <alias>@<password>"
+        }
+
+        if ($jksPath) {
+            # Find Android SDK build-tools (zipalign + apksigner)
+            $sdkBuildTools = $null
+            $searchBases = @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "C:\\Android\\Sdk", "C:\\Users\\XuYang\\AppData\\Local\\Android\\Sdk", "C:\\Program Files\\Android\\Sdk")
+            foreach ($base in $searchBases) {
+                if ($base -and (Test-Path $base)) {
+                    $btDir = Join-Path $base 'build-tools'
+                    if (Test-Path $btDir) {
+                        $latest = Get-ChildItem $btDir -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+                        if ($latest) {
+                            $candidate = Join-Path $latest.FullName 'zipalign.exe'
+                            if (Test-Path $candidate) { $sdkBuildTools = $latest.FullName; break }
                         }
                     }
                 }
             }
 
-            Write-Host "jarsigner: $jarsigner"
             Write-Host "jks path: $jksPath"
+            Write-Host "alias: $alias"
             Write-Host "password: $jksPwd"
-            Write-Host "Signing: $signedApk"
+            Write-Host "build-tools: $sdkBuildTools"
 
-            if ($jarsigner -and (Test-Path $jarsigner)) {
-                & $jarsigner @('-keystore', $jksPath, '-storepass', $jksPwd, '-signedjar', $signedApk, $signedApk, $jksPath)
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host "Signed successfully."
-                } else {
-                    Write-Host "Signing failed."
+            if ($sdkBuildTools) {
+                $zipalign = Join-Path $sdkBuildTools 'zipalign.exe'
+                $apksigner = Join-Path $sdkBuildTools 'apksigner.bat'
+                $alignedApk = Join-Path $apkDir "$n-aligned.apk"
+
+                Write-Host "zipalign: $zipalign"
+                & $zipalign @('-v', '4', $destApk, $alignedApk)
+                if ($LASTEXITCODE -ne 0) { Write-Host "zipalign failed." }
+                else {
+                    Write-Host "apksigner sign with $jksPath"
+                    & $apksigner @('sign', '--ks', $jksPath, '--ks-key-alias', $alias, '--ks-pass', "pass:$jksPwd", '--out', $destApk, $alignedApk)
+                    if ($LASTEXITCODE -eq 0) {
+                        Remove-Item $alignedApk -Force -ErrorAction SilentlyContinue
+                        Write-Host "Signed successfully."
+                    } else { Write-Host "apksigner sign failed." }
                 }
             } else {
-                Write-Host "jarsigner not found. Set JAVA_HOME environment variable or install JDK."
+                Write-Host "Android SDK build-tools not found. Set ANDROID_HOME or ANDROID_SDK_ROOT."
             }
-        } else {
-            Write-Host "Invalid -CA format. Use: path@password or path@'password with @'"
         }
     }
 } else {
