@@ -1,4 +1,4 @@
-﻿﻿param(
+param(
     [string]$o = 'Debug',
     [string]$n = 'xypasswordbook_debug',
     [string]$a = 'https://auth-test.mksword.com',
@@ -19,7 +19,7 @@ $gradleArgs = @(
     'org.gradle.wrapper.GradleWrapperMain',
     'clean', "assemble$mode",
     '--no-daemon',
-    "-PAUTH_ISSUER=*** -PCLIENT_ID=$c",
+    "-PAUTH_ISSUER=$env:AUTH_ISSUER -PCLIENT_ID=$c",
     "-PAPI_URI=$I"
 )
 
@@ -37,7 +37,6 @@ if ($builtApk) {
     Write-Host "Output: $destApk"
 
     if ($CA -ne '') {
-        # Format: jks_path@ks-key-alias
         $atIdx = $CA.IndexOf('@')
         if ($atIdx -gt 0) {
             $jksPath = $CA.Substring(0, $atIdx)
@@ -48,59 +47,42 @@ if ($builtApk) {
         }
 
         if ($jksPath) {
-            # Find Android SDK: local.properties sdk.dir first, then env vars, then common paths
             $sdkDir = $null
-
             $localProps = Join-Path $projectRoot 'local.properties'
             if (Test-Path $localProps) {
                 $props = Get-Content $localProps | Where-Object { $_ -match 'sdk\.dir\s*=\s*(.+)' }
-                if ($props) {
-                    $sdkDir = ($props -replace '.*sdk\.dir\s*=\s*', '').Trim()
-                }
+                if ($props) { $sdkDir = ($props -replace '.*sdk\.dir\s*=\s*', '').Trim() }
             }
-
             if (-not $sdkDir -or -not (Test-Path $sdkDir)) {
-                $searchBases = @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "C:\\Android\\Sdk", "C:\\Users\\XuYang\\AppData\\Local\\Android\\Sdk", "C:\\Program Files\\Android\\Sdk")
-                foreach ($base in $searchBases) {
+                foreach ($base in @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "C:\Android\Sdk", "C:\Users\XuYang\AppData\Local\Android\Sdk", "C:\Program Files\Android\Sdk")) {
                     if ($base -and (Test-Path $base)) { $sdkDir = $base; break }
                 }
             }
 
-            # Determine build-tools version: local.properties > compileSdk (36.x.x for Android 16) > latest
             $buildToolsDir = $null
             $buildToolsVersion = $null
-            # compileSdk = 36 => prefer build-tools 36.x.x
             $preferredBtMajor = '36'
 
             $localProps = Join-Path $projectRoot 'local.properties'
             if (Test-Path $localProps) {
                 $btLine = Get-Content $localProps | Where-Object { $_ -match 'build-tools\s*=\s*(.+)' }
-                if ($btLine) {
-                    $buildToolsVersion = ($btLine -replace '.*build-tools\s*=\s*', '').Trim()
-                }
+                if ($btLine) { $buildToolsVersion = ($btLine -replace '.*build-tools\s*=\s*', '').Trim() }
             }
 
             if ($sdkDir -and (Test-Path $sdkDir)) {
                 $btBase = Join-Path $sdkDir 'build-tools'
                 if (Test-Path $btBase) {
                     $candidates = @()
-                    # Try exact version if specified
                     if ($buildToolsVersion) {
                         $candidate = Join-Path $btBase $buildToolsVersion
                         if (Test-Path (Join-Path $candidate 'zipalign.exe')) { $candidates += $candidate }
                     }
-                    # Try compileSdk-matched major version (36 for Android 16)
                     $sdkMatched = Get-ChildItem $btBase -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "^$preferredBtMajor\." } | Sort-Object Name -Descending | Select-Object -First 1
                     if ($sdkMatched -and (Test-Path (Join-Path $sdkMatched.FullName 'zipalign.exe'))) { $candidates += $sdkMatched.FullName }
-                    # Fallback: latest
                     $latest = Get-ChildItem $btBase -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
                     if ($latest -and (Test-Path (Join-Path $latest.FullName 'zipalign.exe'))) { $candidates += $latest.FullName }
-                    # Pick first valid
                     foreach ($c in $candidates) {
-                        if (-not $buildToolsDir) {
-                            $buildToolsDir = $c
-                            $buildToolsVersion = (Split-Path $c -Leaf)
-                        }
+                        if (-not $buildToolsDir) { $buildToolsDir = $c; $buildToolsVersion = (Split-Path $c -Leaf) }
                     }
                 }
             }
@@ -127,7 +109,7 @@ if ($builtApk) {
                     } else { Write-Host "apksigner sign failed." }
                 }
             } else {
-                Write-Host "Android SDK build-tools not found. Add sdk.dir to local.properties or set ANDROID_HOME."
+                Write-Host "Android SDK build-tools not found."
             }
         }
     }
