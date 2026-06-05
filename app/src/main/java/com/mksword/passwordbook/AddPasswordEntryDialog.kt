@@ -7,7 +7,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,7 +27,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun AddPasswordEntryDialog(
     passwordBookId: String,
-    snackbarHostState: SnackbarHostState,
     onDismissRequest: () -> Unit,
     onConfirm: (CreatePasswordRequest) -> Unit
 ) {
@@ -41,9 +39,9 @@ fun AddPasswordEntryDialog(
     var passwordVisible by remember { mutableStateOf(false) }
     var remark by remember { mutableStateOf("") }
 
-    var selectedTypeLabel by remember { mutableStateOf("纯数字") }
+    var selectedTypeLabel by remember { mutableStateOf("General") }
     var typeMenuExpanded by remember { mutableStateOf(false) }
-    val typeOptions = listOf("纯数字" to 0, "数字+字母" to 1, "混合字符" to 2)
+    val typeOptions = listOf("Number Only" to 0, "General" to 1)
 
     var selectedStrengthLabel by remember { mutableStateOf("Strong") }
     var strengthMenuExpanded by remember { mutableStateOf(false) }
@@ -54,7 +52,6 @@ fun AddPasswordEntryDialog(
         "Very Strong" to WeakLevel.VERY_STRONG
     )
 
-    // 用于在 Dialog 内部显示错误提示
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val isFormValid = title.isNotBlank() &&
@@ -119,7 +116,6 @@ fun AddPasswordEntryDialog(
                         )
                     }
                 )
-                // 在表单底部显示错误提示
                 if (errorMessage != null) {
                     androidx.compose.material3.Text(
                         text = errorMessage!!,
