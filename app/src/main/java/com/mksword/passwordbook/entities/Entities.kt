@@ -133,12 +133,19 @@ data class NewPasswordBookRequest(
     )
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
-data class GetRandomPasswordRequest(
+data class GetRandomPasswordRequest  constructor(
     val passwordBookId: String,
+    @EncodeDefault
     val minLength: Int = 8,
+    @EncodeDefault
     val maxLength: Int = 20,
+    @SerialName("passwordType")
+    @EncodeDefault
     private val passwordTypeValue: Int = AllowedType.GENERAL.value,
+    @SerialName("weakLevel")
+    @EncodeDefault
     private val weakLevelValue: Int = WeakLevel.STRONG.value
 ) {
     val passwordType: AllowedType get() = AllowedType.fromValue(passwordTypeValue)
