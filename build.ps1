@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$o = 'Debug',
     [string]$n = 'xypasswordbook_debug',
     [string]$a = 'https://auth-test.mksword.com',
@@ -52,13 +52,17 @@ if ($builtApk) {
             if (Test-Path $localProps) {
                 $props = Get-Content $localProps | Where-Object { $_ -match 'sdk.dir' }
                 if ($props) {
-                    $sdkDir = (($props -split '=', 2)[1]).Trim()
-                    if ($sdkDir -and (Test-Path $sdkDir)) { $sdkDir = (Resolve-Path $sdkDir).Path }
+                    $parts = $props.Split('=', 2)
+                    if ($parts.Length -ge 2) {
+                        $raw = $parts[1].Trim()
+                        $raw = $raw -replace '\\\\+', '\'
+                        if ($raw -and (Test-Path $raw)) { $sdkDir = $raw }
+                    }
                 }
             }
-            if (-not $sdkDir -or -not (Test-Path $sdkDir)) {
+            if (-not $sdkDir) {
                 foreach ($base in @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "C:\Android\Sdk", "C:\Users\XuYang\AppData\Local\Android\Sdk", "C:\Program Files\Android\Sdk")) {
-                    if ($base -and (Test-Path $base)) { $sdkDir = (Resolve-Path $base).Path; break }
+                    if ($base -and (Test-Path $base)) { $sdkDir = $base; break }
                 }
             }
 
