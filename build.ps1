@@ -37,34 +37,18 @@ if ($builtApk) {
     Write-Host "Output: $destApk"
 
     if ($CA -ne '') {
-        # Format: --ks <path> --ks-key-alias <alias>@<password>  or  --ks <path> --ks-key-alias <alias>@'<password with @>'
-        $ksIdx = $CA.IndexOf('--ks')
-        $aliasIdx = $CA.IndexOf('--ks-key-alias')
-        if ($ksIdx -ge 0 -and $aliasIdx -gt $ksIdx) {
-            $ksPart = $CA.Substring($ksIdx + 4, $aliasIdx - $ksIdx - 4).Trim()
-            $aliasPart = $CA.Substring($aliasIdx + 16).Trim()
-
-            $aliasAtIdx = $aliasPart.IndexOf('@')
-            if ($aliasAtIdx -gt 0) {
-                $jksPath = $ksPart
-                $alias = $aliasPart.Substring(0, $aliasAtIdx)
-                $jksPwdRaw = $aliasPart.Substring($aliasAtIdx + 1)
-                if ($jksPwdRaw.StartsWith("'") -and $jksPwdRaw.EndsWith("'")) {
-                    $jksPwd = $jksPwdRaw.Substring(1, $jksPwdRaw.Length - 2)
-                } else {
-                    $jksPwd = $jksPwdRaw
-                }
-            } else {
-                $jksPath = $null
-                Write-Host "Invalid -CA format. Use: --ks <path> --ks-key-alias <alias>@<password>"
-            }
+        # Format: jks_path@ks-key-alias
+        $atIdx = $CA.IndexOf('@')
+        if ($atIdx -gt 0) {
+            $jksPath = $CA.Substring(0, $atIdx)
+            $alias = $CA.Substring($atIdx + 1)
         } else {
             $jksPath = $null
-            Write-Host "Invalid -CA format. Use: --ks <path> --ks-key-alias <alias>@<password>"
+            Write-Host "Invalid -CA format. Use: jks_path@ks-key-alias"
         }
 
         if ($jksPath) {
-            # Find Android SDK build-tools (zipalign + apksigner)
+            # Find Android SDK build-tools
             $sdkBuildTools = $null
             $searchBases = @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "C:\\Android\\Sdk", "C:\\Users\\XuYang\\AppData\\Local\\Android\\Sdk", "C:\\Program Files\\Android\\Sdk")
             foreach ($base in $searchBases) {
@@ -82,7 +66,6 @@ if ($builtApk) {
 
             Write-Host "jks path: $jksPath"
             Write-Host "alias: $alias"
-            Write-Host "password: $jksPwd"
             Write-Host "build-tools: $sdkBuildTools"
 
             if ($sdkBuildTools) {
@@ -95,7 +78,7 @@ if ($builtApk) {
                 if ($LASTEXITCODE -ne 0) { Write-Host "zipalign failed." }
                 else {
                     Write-Host "apksigner sign with $jksPath"
-                    & $apksigner @('sign', '--ks', $jksPath, '--ks-key-alias', $alias, '--ks-pass', "pass:$jksPwd", '--out', $destApk, $alignedApk)
+                    & $apksigner @('sign', '--ks', $jksPath, '--ks-key-alias', $alias, '--out', $destApk, $alignedApk)
                     if ($LASTEXITCODE -eq 0) {
                         Remove-Item $alignedApk -Force -ErrorAction SilentlyContinue
                         Write-Host "Signed successfully."

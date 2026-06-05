@@ -2,7 +2,7 @@
 
 BUILD_MODE="Debug"
 APK_NAME="xypasswordbook_debug"
-AUTH_ISSUER="http...hile getopts "o:n:a:c:I:CA:h" opt; do
+AUTH_ISSUER=*** getopts "o:n:a:c:I:CA:h" opt; do
   case $opt in
     o) BUILD_MODE="$OPTARG" ;;
     n) APK_NAME="$OPTARG" ;;
@@ -10,13 +10,13 @@ AUTH_ISSUER="http...hile getopts "o:n:a:c:I:CA:h" opt; do
     c) CLIENT_ID="$OPTARG" ;;
     I) API_URI="$OPTARG" ;;
     CA) CA_ARG="$OPTARG" ;;
-    h) echo "Usage: $0 -o <Release|Debug> -n <apk_name> -a <AUTH_ISSUER> -c <CLIENT_ID> -I <API_URI> -CA <--ks <jks_path> --ks-key-alias <alias>@<password>>"
+    h) echo "Usage: $0 -o <Release|Debug> -n <apk_name> -a <AUTH_ISSUER> -c <CLIENT_ID> -I <API_URI> -CA <jks_path@ks-key-alias>"
        echo "  -o  Build mode (Release/Debug, default: Debug)"
        echo "  -n  APK filename without extension (default: xypasswordbook_debug)"
        echo "  -a  AUTH_ISSUER URL (default: https://auth-test.mksword.com)"
        echo "  -c  CLIENT_ID (default: password_book_app)"
        echo "  -I  API_URI URL (default: https://api-test.mksword.com)"
-       echo "  -CA --ks <jks_path> --ks-key-alias <alias>@<password> (password with @ use single quotes)"
+       echo "  -CA jks_path@ks-key-alias"
        exit 0 ;;
     *) echo "Invalid option: -$opt" >&2; exit 1 ;;
   esac
@@ -41,31 +41,9 @@ if [ -n "$BUILT_APK" ]; then
     echo "Output: $DEST_APK"
 
     if [ -n "$CA_ARG" ]; then
-        # Parse --ks <path> --ks-key-alias <alias>@<password>
-        JKS_PATH=""
-        ALIAS=""
-        JKS_PWD=""
-
-        while [[ $# -gt 0 ]]; do
-            case $1 in
-                --ks)
-                    JKS_PATH="$2"; shift 2 ;;
-                --ks-key-alias)
-                    REST="$2"
-                    if [[ "$REST" == *"@"* ]]; then
-                        ALIAS="${REST%%@*}"
-                        JKS_PWD="${REST#*@}"
-                        if [[ "$JKS_PWD" == "'"* ]]; then
-                            JKS_PWD="${JKS_PWD:1:${#JKS_PWD}-2}"
-                        fi
-                    else
-                        ALIAS="$REST"
-                        JKS_PWD=""
-                    fi
-                    break ;;
-                *) shift ;;
-            esac
-        done
+        # Format: jks_path@ks-key-alias
+        JKS_PATH="${CA_ARG%%@*}"
+        ALIAS="${CA_ARG#*@}"
 
         # Find Android SDK build-tools
         SDK_BUILD_TOOLS=""
@@ -81,7 +59,6 @@ if [ -n "$BUILT_APK" ]; then
 
         echo "jks path: $JKS_PATH"
         echo "alias: $ALIAS"
-        echo "password: $JKS_PWD"
         echo "build-tools: $SDK_BUILD_TOOLS"
 
         if [ -n "$SDK_BUILD_TOOLS" ]; then
@@ -93,7 +70,7 @@ if [ -n "$BUILT_APK" ]; then
             "$ZIPALIGN" -v 4 "$DEST_APK" "$ALIGNED_APK"
             if [ $? -eq 0 ]; then
                 echo "apksigner sign with $JKS_PATH"
-                "$APKSIGNER" sign --ks "$JKS_PATH" --ks-key-alias "$ALIAS" --ks-pass "pass:$JKS_PWD" --out "$DEST_APK" "$ALIGNED_APK"
+                "$APKSIGNER" sign --ks "$JKS_PATH" --ks-key-alias "$ALIAS" --out "$DEST_APK" "$ALIGNED_APK"
                 if [ $? -eq 0 ]; then
                     rm -f "$ALIGNED_APK"
                     echo "Signed successfully."
