@@ -10,7 +10,7 @@
 $mode = if ($o -eq 'Release') { 'Release' } else { 'Debug' }
 $projectRoot = $PSScriptRoot
 $wrapperJar = Join-Path $projectRoot 'gradle\wrapper\gradle-wrapper.jar'
-$javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { 'java.exe' }
+$javaExe = if ($env.JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\java.exe' } else { 'java.exe' }
 
 $gradleArgs = @(
     '-ea', '-Xmx64m', '-Xms64m',
@@ -36,7 +36,6 @@ if ($builtApk) {
     Rename-Item -Path $builtApk.FullName -NewName "$n.apk" -Force
     Write-Host "Output: $destApk"
 
-    # Sign APK if -C is provided (format: path@password or path@'password with @')
     if ($C -ne '') {
         $atIndex = $C.LastIndexOf('@')
         if ($atIndex -gt 0) {
@@ -47,7 +46,7 @@ if ($builtApk) {
             } else {
                 $jksPwd = $jksPwdRaw
             }
-            $signedApk = Join-Path $apkDir "$n.apk"
+            $signedApk = $destApk
             $jarsigner = if ($env.JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\jarsigner.exe' } else { 'jarsigner.exe' }
             Write-Host "Signing: $signedApk with $jksPath"
             & $jarsigner -keystore $jksPath -storepass $jksPwd -signedjar $signedApk $signedApk $jksPath
