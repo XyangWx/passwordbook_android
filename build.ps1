@@ -37,10 +37,12 @@ if ($builtApk) {
     Write-Host "Output: $destApk"
 
     if ($CA -ne '') {
-        $atIndex = $CA.LastIndexOf('@')
+        # Split at FIRST @ (password may contain @)
+        $atIndex = $CA.IndexOf('@')
         if ($atIndex -gt 0) {
             $jksPath = $CA.Substring(0, $atIndex)
             $jksPwdRaw = $CA.Substring($atIndex + 1)
+            # Unquote if wrapped in single quotes
             if ($jksPwdRaw.StartsWith("'") -and $jksPwdRaw.EndsWith("'")) {
                 $jksPwd = $jksPwdRaw.Substring(1, $jksPwdRaw.Length - 2)
             } else {
@@ -48,27 +50,11 @@ if ($builtApk) {
             }
             $signedApk = $destApk
 
-            # Find jarsigner: try JAVA_HOME, then search common JDK paths
+            # Find jarsigner: try JAVA_HOME, then from java.exe path, then search common JDK paths
             $jarsigner = $null
             if ($env:JAVA_HOME) {
                 $candidate = Join-Path $env.JAVA_HOME 'bin\jarsigner.exe'
                 if (Test-Path $candidate) { $jarsigner = $candidate }
-            }
-            if (-not $jarsigner) {
-                $jdkPaths = @(
-                    "${env:ProgramFiles}\Java",
-                    "${env:ProgramFiles(x86)}\Java",
-                    "C:\Java",
-                    "C:\Program Files\Android\jdk"
-                )
-                foreach ($base in $jdkPaths) {
-                    if (Test-Path $base) {
-                        Get-ChildItem $base -Directory | ForEach-Object {
-                            $candidate = Join-Path $_.FullName 'bin\jarsigner.exe'
-                            if (-not $jarsigner -and (Test-Path $candidate)) { $jarsigner = $candidate }
-                        }
-                    }
-                }
             }
             if (-not $jarsigner) {
                 $javaCmd = Get-Command java.exe -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -80,18 +66,37 @@ if ($builtApk) {
                 }
             }
             if (-not $jarsigner) {
-                $jarsigner = 'jarsigner.exe'
+                $searchBases = @(
+                    "${env:ProgramFiles}\Java",
+                    "${env:ProgramFiles(x86)}\Java",
+                    "C:\Java",
+                    "C:\Program Files\Android\jdk",
+                    "C:\Android\jdk"
+                )
+                foreach ($base in $searchBases) {
+                    if (Test-Path $base) {
+                        Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                            $candidate = Join-Path $_.FullName 'bin\jarsigner.exe'
+                            if (-not $jarsigner -and (Test-Path $candidate)) { $jarsigner = $candidate }
+                        }
+                    }
+                }
             }
 
             Write-Host "jarsigner: $jarsigner"
             Write-Host "jks path: $jksPath"
             Write-Host "password: $jksPwd"
-            Write-Host "Signing: $signedApk with $jksPath"
-            & $jarsigner @('-keystore', $jksPath, '-storepass', $jksPwd, '-signedjar', $signedApk, $signedApk, $jksPath)
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "Signed successfully."
+            Write-Host "Signing: $signedApk"
+
+            if ($jarsigner -and (Test-Path $jarsigner)) {
+                & $jarsigner @('-keystore', $jksPath, '-storepass', $jksPwd, '-signedjar', $signedApk, $signedApk, $jksPath)
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "Signed successfully."
+                } else {
+                    Write-Host "Signing failed."
+                }
             } else {
-                Write-Host "Signing failed."
+                Write-Host "jarsigner not found. Set JAVA_HOME environment variable or install JDK."
             }
         } else {
             Write-Host "Invalid -CA format. Use: path@password or path@'password with @'"
