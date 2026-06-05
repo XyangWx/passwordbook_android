@@ -14,7 +14,7 @@ $javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else 
 $gradleArgs = @(
     '-ea', '-Xmx64m', '-Xms64m',
     '-Dorg.gradle.appname=gradlew',
-    '-classpath', '"""$wrapperJar"""',
+    '-classpath', $wrapperJar,
     'org.gradle.wrapper.GradleWrapperMain',
     "-PAUTH_ISSUER=*** -PCLIENT_ID=$c",
     '--no-daemon',
