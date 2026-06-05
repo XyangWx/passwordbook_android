@@ -7,7 +7,6 @@ AUTH_ISSUER="https://auth-test.mksword.com"
 CLIENT_ID="password_book_app"
 API_URI="https://api-test.mksword.com"
 
-# 解析参数
 while getopts "o:n:a:c:I:h" opt; do
   case $opt in
     o) BUILD_MODE="$OPTARG" ;;
@@ -26,13 +25,23 @@ while getopts "o:n:a:c:I:h" opt; do
   esac
 done
 
-cd "$(dirname "$0")"
+PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$PROJECT_ROOT"
 
 chmod +x gradlew
 
-# 清理后构建
 ./gradlew clean assemble"$BUILD_MODE" \
   -PAUTH_ISSUER="$AUTH_ISSUER" \
   -PCLIENT_ID="$CLIENT_ID" \
-  -PAPI_URI="$API_URI" \
-  -PAPK_OUTPUT_NAME="$APK_NAME"
+  -PAPI_URI="$API_URI"
+
+# 重命名 APK
+BUILT_APK="$PROJECT_ROOT/app/build/outputs/apk/$BUILD_MODE/app-$BUILD_MODE.apk"
+DEST_APK="$PROJECT_ROOT/app/build/outputs/apk/$BUILD_MODE/$APK_NAME.apk"
+
+if [ -f "$BUILT_APK" ]; then
+    mv -f "$BUILT_APK" "$DEST_APK"
+    echo "Output: $DEST_APK"
+else
+    echo "APK not found: $BUILT_APK"
+fi
