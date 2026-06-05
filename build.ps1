@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$o = 'Debug',
     [string]$n = 'xypasswordbook_debug',
     [string]$a = 'https://auth-test.mksword.com',
