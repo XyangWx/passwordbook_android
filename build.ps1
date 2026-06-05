@@ -4,7 +4,7 @@
     [string]$a = 'https://auth-test.mksword.com',
     [string]$c = 'password_book_app',
     [string]$I = 'https://api-test.mksword.com',
-    [string]$C = ''
+    [string]$CA = ''
 )
 
 $mode = if ($o -eq 'Release') { 'Release' } else { 'Debug' }
@@ -36,11 +36,11 @@ if ($builtApk) {
     Rename-Item -Path $builtApk.FullName -NewName "$n.apk" -Force
     Write-Host "Output: $destApk"
 
-    if ($C -ne '') {
-        $atIndex = $C.LastIndexOf('@')
+    if ($CA -ne '') {
+        $atIndex = $CA.LastIndexOf('@')
         if ($atIndex -gt 0) {
-            $jksPath = $C.Substring(0, $atIndex)
-            $jksPwdRaw = $C.Substring($atIndex + 1)
+            $jksPath = $CA.Substring(0, $atIndex)
+            $jksPwdRaw = $CA.Substring($atIndex + 1)
             if ($jksPwdRaw.StartsWith("'") -and $jksPwdRaw.EndsWith("'")) {
                 $jksPwd = $jksPwdRaw.Substring(1, $jksPwdRaw.Length - 2)
             } else {
@@ -56,7 +56,7 @@ if ($builtApk) {
                 Write-Host "Signing failed."
             }
         } else {
-            Write-Host "Invalid -C format. Use: path@password or path@'password with @'"
+            Write-Host "Invalid -CA format. Use: path@password or path@'password with @'"
         }
     }
 } else {

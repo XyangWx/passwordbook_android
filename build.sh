@@ -2,26 +2,25 @@
 
 BUILD_MODE="Debug"
 APK_NAME="xypasswordbook_debug"
-AUTH_ISSUER="https://auth-test.mksword.com"
-CLIENT_ID="password_book_app"
+AUTH_ISSUER=***CLIENT_ID="password_book_app"
 API_URI="https://api-test.mksword.com"
 JKS_ARG=""
 
-while getopts "o:n:a:c:I:C:h" opt; do
+while getopts "o:n:a:c:I:CA:h" opt; do
   case $opt in
     o) BUILD_MODE="$OPTARG" ;;
     n) APK_NAME="$OPTARG" ;;
-    a) AUTH_ISSUER="$OPTARG" ;;
+    a) AUTH_ISSUER=*** ;;
     c) CLIENT_ID="$OPTARG" ;;
     I) API_URI="$OPTARG" ;;
-    C) JKS_ARG="$OPTARG" ;;
-    h) echo "Usage: $0 -o <Release|Debug> -n <apk_name> -a <AUTH_ISSUER> -c <CLIENT_ID> -I <API_URI> -C <jks_path@password>"
+    CA) JKS_ARG="$OPTARG" ;;
+    h) echo "Usage: $0 -o <Release|Debug> -n <apk_name> -a <AUTH_ISSUER> -c <CLIENT_ID> -I <API_URI> -CA <jks_path@password>"
        echo "  -o  Build mode (Release/Debug, default: Debug)"
        echo "  -n  APK filename without extension (default: xypasswordbook_debug)"
        echo "  -a  AUTH_ISSUER URL (default: https://auth-test.mksword.com)"
        echo "  -c  CLIENT_ID (default: password_book_app)"
        echo "  -I  API_URI URL (default: https://api-test.mksword.com)"
-       echo "  -C  JKS path and password (format: path@password or path@'password with @')"
+       echo "  -CA JKS path and password (format: path@password or path@'password with @')"
        exit 0 ;;
     *) echo "Invalid option: -$opt" >&2; exit 1 ;;
   esac
@@ -33,7 +32,7 @@ cd "$PROJECT_ROOT"
 chmod +x gradlew
 
 ./gradlew clean assemble"$BUILD_MODE" \
-  -PAUTH_ISSUER="$AUTH_ISSUER" \
+  -PAUTH_ISSUER=*** \
   -PCLIENT_ID="$CLIENT_ID" \
   -PAPI_URI="$API_URI"
 
@@ -46,7 +45,6 @@ if [ -n "$BUILT_APK" ]; then
     echo "Output: $DEST_APK"
 
     if [ -n "$JKS_ARG" ]; then
-        # Split at last @ (password can contain @ only if quoted with ')
         if [[ "$JKS_ARG" == *@* ]]; then
             JKS_PATH="${JKS_ARG%%@*}"
             REST="${JKS_ARG#*@}"
@@ -63,7 +61,7 @@ if [ -n "$BUILT_APK" ]; then
                 echo "Signing failed."
             fi
         else
-            echo "Invalid -C format. Use: path@password or path@'password with @'"
+            echo "Invalid -CA format. Use: path@password or path@'password with @'"
         fi
     fi
 else
