@@ -128,6 +128,7 @@ if ($builtApk) {
                     if ($LASTEXITCODE -eq 0) {
                         Remove-Item $alignedApk -Force -ErrorAction SilentlyContinue
                         Write-Host "Signed successfully."
+                        Write-Host "Output: $destApk"
                     } else { Write-Host "apksigner sign failed." }
                 }
             } else {
