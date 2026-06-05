@@ -10,7 +10,7 @@
 $mode = if ($o -eq 'Release') { 'Release' } else { 'Debug' }
 $projectRoot = $PSScriptRoot
 $wrapperJar = Join-Path $projectRoot 'gradle\wrapper\gradle-wrapper.jar'
-$javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { 'java.exe' }
+$javaExe = if ($env:JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\java.exe' } else { 'java.exe' }
 
 $gradleArgs = @(
     '-ea', '-Xmx64m', '-Xms64m',
@@ -37,29 +37,52 @@ if ($builtApk) {
     Write-Host "Output: $destApk"
 
     if ($CA -ne '') {
-        # Split at last @ (password may contain @)
         $atIndex = $CA.LastIndexOf('@')
         if ($atIndex -gt 0) {
             $jksPath = $CA.Substring(0, $atIndex)
             $jksPwdRaw = $CA.Substring($atIndex + 1)
-            # Unquote if wrapped in single quotes
             if ($jksPwdRaw.StartsWith("'") -and $jksPwdRaw.EndsWith("'")) {
                 $jksPwd = $jksPwdRaw.Substring(1, $jksPwdRaw.Length - 2)
             } else {
                 $jksPwd = $jksPwdRaw
             }
             $signedApk = $destApk
-            # Find jarsigner: try JAVA_HOME first, then search PATH
+
+            # Find jarsigner: try JAVA_HOME, then search common JDK paths
+            $jarsigner = $null
             if ($env:JAVA_HOME) {
-                $jarsigner = Join-Path $env:JAVA_HOME 'bin\jarsigner.exe'
-            } else {
-                $jarsigner = Get-Command jarsigner.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-                if ($jarsigner) {
-                    $jarsigner = $jarsigner.Source
-                } else {
-                    $jarsigner = 'jarsigner.exe'
+                $candidate = Join-Path $env.JAVA_HOME 'bin\jarsigner.exe'
+                if (Test-Path $candidate) { $jarsigner = $candidate }
+            }
+            if (-not $jarsigner) {
+                $jdkPaths = @(
+                    "${env:ProgramFiles}\Java",
+                    "${env:ProgramFiles(x86)}\Java",
+                    "C:\Java",
+                    "C:\Program Files\Android\jdk"
+                )
+                foreach ($base in $jdkPaths) {
+                    if (Test-Path $base) {
+                        Get-ChildItem $base -Directory | ForEach-Object {
+                            $candidate = Join-Path $_.FullName 'bin\jarsigner.exe'
+                            if (-not $jarsigner -and (Test-Path $candidate)) { $jarsigner = $candidate }
+                        }
+                    }
                 }
             }
+            if (-not $jarsigner) {
+                $javaCmd = Get-Command java.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+                if ($javaCmd) {
+                    $javaBin = Split-Path $javaCmd.Source
+                    $jdkRoot = Split-Path $javaBin
+                    $candidate = Join-Path $jdkRoot 'jarsigner.exe'
+                    if (Test-Path $candidate) { $jarsigner = $candidate }
+                }
+            }
+            if (-not $jarsigner) {
+                $jarsigner = 'jarsigner.exe'
+            }
+
             Write-Host "Signing: $signedApk with $jksPath"
             & $jarsigner @('-keystore', $jksPath, '-storepass', $jksPwd, '-signedjar', $signedApk, $signedApk, $jksPath)
             if ($LASTEXITCODE -eq 0) {
