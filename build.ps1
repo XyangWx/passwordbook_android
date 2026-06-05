@@ -49,7 +49,7 @@ if ($builtApk) {
             $signedApk = $destApk
             $jarsigner = if ($env.JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\jarsigner.exe' } else { 'jarsigner.exe' }
             Write-Host "Signing: $signedApk with $jksPath"
-            & $jarsigner -keystore $jksPath -storepass $jksPwd -signedjar $signedApk $signedApk $jksPath
+            & $jarsigner @('-keystore', $jksPath, '-storepass', $jksPwd, '-signedjar', $signedApk, $signedApk, $jksPath)
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "Signed successfully."
             } else {
