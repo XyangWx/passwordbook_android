@@ -1,9 +1,9 @@
 ﻿param(
     [string]$o = 'Debug',
     [string]$n = 'xypasswordbook_debug',
-    [string]$a = 'https://auth-test.mksword.com',
+    [string]$a = 'https://auth.mksword.com',
     [string]$c = 'password_book_app',
-    [string]$I = 'https://api-test.mksword.com',
+    [string]$I = 'https://api.mksword.com',
     [string]$CA = ''
 )
 
@@ -19,8 +19,9 @@ $gradleArgs = @(
     'org.gradle.wrapper.GradleWrapperMain',
     'clean', "assemble$mode",
     '--no-daemon',
-    "-PAUTH_ISSUER=*** -PCLIENT_ID=$c",
-    "-PAPI_URI=$I"
+    "-PAUTH_ISSUER_DEBUG=$a",
+    "-PCLIENT_ID=$c",
+    "-PAPI_URI_DEBUG=$I"
 )
 
 Write-Host "Build mode: $mode"
