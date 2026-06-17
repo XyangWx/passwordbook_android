@@ -12,6 +12,9 @@ $projectRoot = $PSScriptRoot
 $wrapperJar = Join-Path $projectRoot 'gradle\wrapper\gradle-wrapper.jar'
 $javaExe = if ($env:JAVA_HOME) { Join-Path $env.JAVA_HOME 'bin\java.exe' } else { 'java.exe' }
 
+$authIssuerProp = if ($mode -eq 'Release') { "-PAUTH_ISSUER=$a" } else { "-PAUTH_ISSUER_DEBUG=$a" }
+$apiUriProp     = if ($mode -eq 'Release') { "-PAPI_URI=$I" }     else { "-PAPI_URI_DEBUG=$I" }
+
 $gradleArgs = @(
     '-ea', '-Xmx64m', '-Xms64m',
     '-Dorg.gradle.appname=gradlew',
@@ -19,9 +22,9 @@ $gradleArgs = @(
     'org.gradle.wrapper.GradleWrapperMain',
     'clean', "assemble$mode",
     '--no-daemon',
-    "-PAUTH_ISSUER_DEBUG=$a",
+    $authIssuerProp,
     "-PCLIENT_ID=$c",
-    "-PAPI_URI_DEBUG=$I"
+    $apiUriProp
 )
 
 Write-Host "Build mode: $mode"
