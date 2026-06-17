@@ -65,9 +65,11 @@ android {
                 "proguard-rules.pro"
             )
 
-            val authIssuer = getAuthProperty("AUTH_ISSUER", "PROD_AUTH_ISSUER", "")
-            val clientId = getAuthProperty("CLIENT_ID", "PROD_CLIENT_ID", "")
-            val apiUri = getAuthProperty("API_URI", "PROD_API_URI", "")
+            // Release 与 Debug 共用同一组参数（AUTH_ISSUER / CLIENT_ID / API_URI），
+            // 既支持 build.ps1 注入，也支持 PROD_* 环境变量和 local.properties 兜底。
+            val authIssuer = getAuthProperty("AUTH_ISSUER", "PROD_AUTH_ISSUER", "https://auth.mksword.com")
+            val clientId = getAuthProperty("CLIENT_ID", "PROD_CLIENT_ID", "password_book_app")
+            val apiUri = getAuthProperty("API_URI", "PROD_API_URI", "https://api.mksword.com")
 
             buildConfigField("String", "AUTH_ISSUER", "\"$authIssuer\"")
             buildConfigField("String", "CLIENT_ID", "\"$clientId\"")
